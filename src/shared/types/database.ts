@@ -32,4 +32,4 @@ export interface CreateCompanyInput {
   sector?: string
 }
 
-export interface UpdateCompanyInput extends Partial<CreateCompanyInput> {}
+export type UpdateCompanyInput = Partial<CreateCompanyInput>
