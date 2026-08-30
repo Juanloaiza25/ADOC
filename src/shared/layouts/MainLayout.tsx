@@ -28,6 +28,7 @@ export function MainLayout() {
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const isHome = location.pathname === '/'
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export function MainLayout() {
   // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false)
+    setProfileOpen(false)
   }, [location.pathname])
 
   const handleLogout = async () => {
@@ -79,7 +81,7 @@ export function MainLayout() {
     <Link to="/" className={navLinkClass}>Inicio</Link>
   )
 
-  const authItems = isAuthenticated ? (
+  const mobileAuthItems = isAuthenticated ? (
     <>
       <Link to="/dashboard" className={navLinkClass}>
         Dashboard
@@ -112,6 +114,14 @@ export function MainLayout() {
     </>
   )
 
+  const displayName = profile?.full_name || user?.email || 'Mi cuenta'
+  const initials = displayName
+    .split(/\s+|@/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+
   return (
     <div className="min-h-screen bg-dark-950 flex flex-col">
       <nav
@@ -120,25 +130,52 @@ export function MainLayout() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link to="/" className="flex items-center gap-2 text-xl font-bold text-white">
+            <Link to="/" className="flex min-w-0 items-center gap-2 text-xl font-bold text-white">
               <span className="w-12 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-dark-950 font-extrabold text-sm">
                 ADOC
               </span>
-              <span className="hidden lg:inline">Asesoria Documental en Operaciones y Calidad</span>
-              <span className="lg:hidden">ADOC</span>
+              {!isAuthenticated && <span className="hidden 2xl:inline">Asesoria Documental en Operaciones y Calidad</span>}
             </Link>
 
             {/* Desktop nav */}
-            <div className="hidden md:flex gap-6 items-center">
-              {navItems}
-              {authItems}
+            <div className="hidden lg:flex gap-6 items-center">
+              {!isAuthenticated && navItems}
+              {isAuthenticated ? (
+                <>
+                  <Link to="/dashboard" className={navLinkClass}>Panel</Link>
+                  <Link to="/checklists" className={navLinkClass}>Checklists</Link>
+                  <Link to="/forms" className={navLinkClass}>Formularios</Link>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setProfileOpen((open) => !open)}
+                      className="flex max-w-56 items-center gap-2 rounded-xl border border-gray-800 bg-dark-900 px-2.5 py-1.5 text-left transition-colors hover:border-gray-700 hover:bg-dark-800"
+                      aria-expanded={profileOpen}
+                      aria-label="Abrir menú de usuario"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-500 text-xs font-extrabold text-dark-950">{initials}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-white">{displayName}</span>
+                        <span className="block text-xs text-gray-500">Mi cuenta</span>
+                      </span>
+                      <span className={`text-xs text-gray-500 transition-transform ${profileOpen ? 'rotate-180' : ''}`}>⌄</span>
+                    </button>
+                    {profileOpen && (
+                      <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-gray-800 bg-dark-900 p-1.5 shadow-2xl shadow-black/30">
+                        <Link to="/settings/company" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Mi empresa</Link>
+                        <button type="button" onClick={handleLogout} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10">Cerrar sesión</button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : mobileAuthItems}
             </div>
 
             {/* Mobile hamburger */}
             <button
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-800 transition-colors"
+              className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-800 transition-colors"
               aria-label="Menú"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -154,13 +191,13 @@ export function MainLayout() {
 
         {/* Mobile menu */}
         <div
-          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileOpen ? 'max-h-96 border-t border-gray-800' : 'max-h-0'
+          className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileOpen ? 'max-h-[32rem] border-t border-gray-800' : 'max-h-0'
             }`}
         >
           <div className="px-4 py-4 flex flex-col items-center gap-3 bg-dark-950/95 backdrop-blur-md">
-            {navItems}
+            {!isAuthenticated && navItems}
             <div className="border-t border-gray-800 pt-3 flex flex-col items-center gap-3 w-full">
-              {authItems}
+              {mobileAuthItems}
             </div>
           </div>
         </div>
