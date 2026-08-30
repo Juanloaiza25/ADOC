@@ -1,6 +1,6 @@
-# SaaS App
+# ADOC
 
-Proyecto base para una aplicación SaaS construida con React, TypeScript y Tailwind CSS.
+SaaS para gestionar el cumplimiento documental de pymes de alimentos frente a INVIMA, BPM y otras normas colombianas.
 
 ## Stack tecnológico
 
@@ -11,7 +11,9 @@ Proyecto base para una aplicación SaaS construida con React, TypeScript y Tailw
 - **React Router** - Navegación
 - **Zustand** - Estado global
 - **TanStack Query** - Gestión de datos y caché
-- **Supabase** - Auth JWT, base de datos
+- **Cloudflare Workers** - API y autenticación
+- **Cloudflare D1** - Base de datos SQL
+- **Cloudflare R2** - Evidencias documentales
 
 ## Comandos
 
@@ -58,16 +60,15 @@ saas-app/
 └── vite.config.ts
 ```
 
-## Configuración de autenticación (Supabase)
+## Configuración
 
-1. Crea un proyecto en [Supabase](https://supabase.com/dashboard)
-2. Copia `.env.example` a `.env`
-3. En el dashboard de Supabase: **Settings → API** → copia:
-   - `Project URL` → `VITE_SUPABASE_URL`
-   - `anon public` → `VITE_SUPABASE_ANON_KEY`
-4. En **Authentication → Providers** habilita Email
+1. Copia `.env.example` como `.env`.
+2. Ejecuta `npm run worker:dev` para iniciar la API local.
+3. Ejecuta `npm run dev` para iniciar el frontend.
+4. Las migraciones D1 están en `worker/migrations`.
 
 ## Próximos pasos
 
-- Integrar API backend
+- Exportación de reportes PDF y Excel
+- Recuperación de contraseña por correo
 - Configurar tests (Vitest + React Testing Library)

@@ -32,4 +32,69 @@ export interface CreateCompanyInput {
   sector?: string
 }
 
-export interface UpdateCompanyInput extends Partial<CreateCompanyInput> {}
+export type UpdateCompanyInput = Partial<CreateCompanyInput>
+
+export type ChecklistResponseStatus = 'compliant' | 'non_compliant' | 'not_applicable' | 'pending'
+
+export interface ChecklistItem {
+  id: string
+  checklist_id: string
+  title: string
+  description: string | null
+  sort_order: number
+  required: boolean
+}
+
+export interface Checklist {
+  id: string
+  name: string
+  description: string | null
+  regulation: { code: string; name: string } | null
+  items: ChecklistItem[]
+}
+
+export interface CompanyChecklist {
+  id: string
+  company_id: string
+  checklist_id: string
+  status: 'pending' | 'in_progress' | 'completed'
+  progress_percent: number
+}
+
+export interface ChecklistItemResponse {
+  id: string
+  company_checklist_id: string
+  checklist_item_id: string
+  status: ChecklistResponseStatus
+  notes: string | null
+  evidence_url: string | null
+  evidence_key?: string | null
+}
+
+export interface FormField {
+  name: string
+  label: string
+  type: 'text' | 'textarea' | 'date' | 'number' | 'select'
+  required?: boolean
+  options?: string[]
+  placeholder?: string
+}
+
+export interface RegulatoryForm {
+  id: string
+  name: string
+  description: string | null
+  type: string | null
+  version: number
+  schema: { fields: FormField[] }
+  regulation: { code: string; name: string } | null
+}
+
+export interface FormSubmission {
+  id: string
+  company_id: string
+  form_id: string
+  data: Record<string, string | number>
+  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+  updated_at: string
+}

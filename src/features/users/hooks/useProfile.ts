@@ -20,23 +20,12 @@ export function useProfile() {
     },
   })
 
-  const setCompanyMutation = useMutation({
-    mutationFn: ({ companyId, role }: { companyId: string; role?: 'owner' | 'admin' | 'member' }) =>
-      profileService.setCompany(user!.id, companyId, role ?? 'owner'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] })
-      queryClient.invalidateQueries({ queryKey: ['company'] })
-    },
-  })
-
   return {
     profile: query.data ?? null,
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
     update: updateMutation.mutateAsync,
-    setCompany: setCompanyMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
-    isSettingCompany: setCompanyMutation.isPending,
   }
 }

@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+.wrangler/
+supabase/.temp/
 
 # Build output
 dist/

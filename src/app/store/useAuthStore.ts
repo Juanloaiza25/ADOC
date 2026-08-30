@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 export interface User {
   id: string
@@ -16,14 +15,6 @@ interface AuthState {
   logout: () => void
 }
 
-function mapSupabaseUser(sbUser: SupabaseUser): User {
-  return {
-    id: sbUser.id,
-    email: sbUser.email ?? '',
-    name: sbUser.user_metadata?.full_name as string | undefined,
-  }
-}
-
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
@@ -36,5 +27,3 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
   logout: () => set({ user: null, isAuthenticated: false }),
 }))
-
-export { mapSupabaseUser }

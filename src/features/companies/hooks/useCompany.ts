@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { companyService } from '../services/companyService'
-import { profileService } from '@/features/users/services/profileService'
 import { useAuthStore } from '@/app/store/useAuthStore'
 import type { CreateCompanyInput, UpdateCompanyInput } from '@/shared/types/database'
 
@@ -16,11 +15,7 @@ export function useCompany(companyId: string | null | undefined) {
 
   const createMutation = useMutation({
     mutationFn: async (input: CreateCompanyInput) => {
-      const company = await companyService.create(input)
-      if (user) {
-        await profileService.setCompany(user.id, company.id, 'owner')
-      }
-      return company
+      return companyService.create(input)
     },
     onSuccess: (company) => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] })

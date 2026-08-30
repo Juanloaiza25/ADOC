@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { apiRequest } from '@/lib/api'
 
 export interface AuthCredentials {
   email: string
@@ -11,33 +11,28 @@ export interface RegisterCredentials extends AuthCredentials {
 
 export const authService = {
   async login({ email, password }: AuthCredentials) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    if (error) throw error
-    return data
+    return apiRequest<{ user: { id: string; email: string; name?: string } }>('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
   },
 
   async register({ email, password, name }: RegisterCredentials) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: name },
-      },
-    })
-    if (error) throw error
-    return data
+    return apiRequest<{ user: { id: string; email: string; name?: string } }>('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password, name }) })
   },
 
   async logout() {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    await apiRequest('/api/auth/logout', { method: 'POST' })
   },
 
   async getSession() {
-    const { data: { session } } = await supabase.auth.getSession()
-    return session
+    try { return await apiRequest<{ user: { id: string; email: string; name?: string } }>('/api/auth/session') } catch { return null }
+  },
+
+  async requestPasswordReset(email: string) {
+    void email
+    throw new Error('La recuperación por correo estará disponible después de migrar el servicio de email.')
+  },
+
+  async updatePassword(password: string) {
+    void password
+    throw new Error('El enlace de recuperación anterior ya no es válido. Crea una cuenta nueva en Cloudflare.')
   },
 }

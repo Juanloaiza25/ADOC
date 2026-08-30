@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { authService } from '../services/authService'
+import { useAuthStore } from '@/app/store/useAuthStore'
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -10,6 +11,7 @@ export function LoginPage() {
 
   const navigate = useNavigate()
   const location = useLocation()
+  const setUser = useAuthStore((state) => state.setUser)
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/dashboard'
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,7 +20,8 @@ export function LoginPage() {
     setIsLoading(true)
 
     try {
-      await authService.login({ email, password })
+      const { user } = await authService.login({ email, password })
+      setUser(user)
       navigate(from, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
@@ -77,6 +80,9 @@ export function LoginPage() {
               required
               autoComplete="current-password"
             />
+            <Link to="/forgot-password" className="mt-2 block text-right text-xs text-primary-400 hover:text-primary-300">
+              ¿Olvidaste tu contraseña?
+            </Link>
           </div>
           <button
             type="submit"

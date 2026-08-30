@@ -32,7 +32,7 @@ export function DashboardPage() {
     {
       title: 'Formularios',
       desc: 'Registro sanitario, solicitudes INVIMA y más.',
-      href: '#',
+      href: '/forms',
       icon: '📋',
     },
     {
@@ -79,7 +79,7 @@ export function DashboardPage() {
             <h3 className="text-lg font-semibold text-white mb-2">{card.title}</h3>
             <p className="text-gray-400 text-sm mb-4">{card.desc}</p>
             <span className="text-primary-400 text-sm font-medium">
-              {card.href === '#' ? 'Próximamente' : 'Ir →'}
+              Ir →
             </span>
           </Link>
         ))}

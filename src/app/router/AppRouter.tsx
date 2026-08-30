@@ -4,8 +4,12 @@ import { ProtectedRoute } from '@/shared/components/ProtectedRoute'
 import { HomePage } from '@/features/landing/pages/HomePage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { CompanySettingsPage } from '@/features/companies/pages/CompanySettingsPage'
+import { ChecklistsPage } from '@/features/checklists/pages/ChecklistsPage'
+import { FormsPage } from '@/features/forms/pages/FormsPage'
 
 export function AppRouter() {
   return (
@@ -14,6 +18,24 @@ export function AppRouter() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route
+          path="/forms"
+          element={
+            <ProtectedRoute>
+              <FormsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/checklists"
+          element={
+            <ProtectedRoute>
+              <ChecklistsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={

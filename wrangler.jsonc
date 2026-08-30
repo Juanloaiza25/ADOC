@@ -1,0 +1,23 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "adoc-api",
+	"main": "worker/index.ts",
+	"compatibility_date": "2026-08-30",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "adoc-db",
+			"database_id": "9a642126-f027-40f5-b867-e1709c23a1d8",
+			"migrations_dir": "worker/migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "EVIDENCE",
+			"bucket_name": "adoc-evidence"
+		}
+	],
+  "vars": {
+    "APP_ORIGIN": "http://localhost:5173,https://adoc-two.vercel.app"
+	}
+}

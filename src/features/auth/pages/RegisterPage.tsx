@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
+import { useAuthStore } from '@/app/store/useAuthStore'
 
 export function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -11,6 +12,7 @@ export function RegisterPage() {
   const [success, setSuccess] = useState(false)
 
   const navigate = useNavigate()
+  const setUser = useAuthStore((state) => state.setUser)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,9 +20,10 @@ export function RegisterPage() {
     setIsLoading(true)
 
     try {
-      await authService.register({ email, password, name: name || undefined })
+      const { user } = await authService.register({ email, password, name: name || undefined })
+      setUser(user)
       setSuccess(true)
-      setTimeout(() => navigate('/login'), 2000)
+      setTimeout(() => navigate('/dashboard'), 1200)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al registrarse')
     } finally {
@@ -39,7 +42,7 @@ export function RegisterPage() {
           </div>
           <h2 className="text-xl font-bold text-white mb-2">¡Cuenta creada!</h2>
           <p className="text-gray-400 text-sm">
-            Revisa tu correo para confirmar tu cuenta. Redirigiendo al login...
+            Tu sesión está lista. Redirigiendo al dashboard...
           </p>
         </div>
       </div>

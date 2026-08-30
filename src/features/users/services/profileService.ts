@@ -1,38 +1,21 @@
-import { supabase } from '@/lib/supabase'
+import { apiRequest } from '@/lib/api'
 import type { Profile } from '@/shared/types/database'
 
 export const profileService = {
   async getById(id: string): Promise<Profile | null> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', id)
-      .single()
-    if (error) throw error
-    return data as Profile
+    void id
+    const { profile } = await apiRequest<{ profile: Profile | null }>('/api/profile')
+    return profile
   },
 
   async getByAuthUser() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
-    return this.getById(user.id)
+    const { profile } = await apiRequest<{ profile: Profile | null }>('/api/profile')
+    return profile
   },
 
-  async update(id: string, updates: Partial<Pick<Profile, 'full_name' | 'avatar_url' | 'company_id' | 'role'>>) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single()
-    if (error) throw error
-    return data as Profile
-  },
-
-  async setCompany(userId: string, companyId: string, role: Profile['role'] = 'owner') {
-    return this.update(userId, { company_id: companyId, role })
+  async update(id: string, updates: Partial<Pick<Profile, 'full_name' | 'avatar_url'>>) {
+    void id
+    await apiRequest('/api/profile', { method: 'PATCH', body: JSON.stringify(updates) })
+    return (await this.getById(id))!
   },
 }
