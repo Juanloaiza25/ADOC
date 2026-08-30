@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://adoc-api.saas-app.workers.dev/api/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ]
 }
