@@ -30,6 +30,20 @@ export function LoginPage() {
     }
   }
 
+  const handleDemoLogin = async () => {
+    setError(null)
+    setIsLoading(true)
+    try {
+      const { user } = await authService.login({ email: 'demo@adoc.app', password: 'DemoADOC2026!' })
+      setUser(user)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo abrir la demo')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const inputClass = 'w-full px-4 py-3 bg-dark-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
 
   return (
@@ -92,6 +106,22 @@ export function LoginPage() {
             {isLoading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+        <div className="my-5 flex items-center gap-3 text-xs text-gray-600">
+          <span className="h-px flex-1 bg-gray-800" />
+          o prueba el producto
+          <span className="h-px flex-1 bg-gray-800" />
+        </div>
+        <button
+          type="button"
+          disabled={isLoading}
+          onClick={() => void handleDemoLogin()}
+          className="w-full rounded-xl border border-primary-500/40 bg-primary-500/10 px-4 py-3 font-semibold text-primary-400 transition hover:bg-primary-500/20 disabled:opacity-50"
+        >
+          Entrar como usuario demo
+        </button>
+        <p className="mt-2 text-center text-xs text-gray-600">
+          Incluye empresa, checklist y formulario precargados.
+        </p>
         <p className="mt-6 text-center text-sm text-gray-500">
           ¿No tienes cuenta?{' '}
           <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">
