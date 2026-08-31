@@ -6,7 +6,7 @@ export const actionService = {
     const { actions } = await apiRequest<{ actions: CorrectiveAction[] }>('/api/actions')
     return actions
   },
-  async create(input: { checklistResponseId?: string; title: string; description?: string; dueDate?: string; priority?: ActionPriority }) {
+  async create(input: { checklistResponseId?: string; title: string; description?: string; assignedTo?: string; dueDate?: string; priority?: ActionPriority }) {
     const { action } = await apiRequest<{ action: CorrectiveAction }>('/api/actions', { method: 'POST', body: JSON.stringify(input) })
     return action
   },
