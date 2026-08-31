@@ -45,9 +45,6 @@ export function openPrintableReport(input: {
   summary?: string
   rows: PrintableRow[]
 }) {
-  const report = window.open('', '_blank', 'noopener,noreferrer')
-  if (!report) return false
-
   const rows = input.rows.map((row, index) => `
     <tr>
       <td class="number">${index + 1}</td>
@@ -55,7 +52,7 @@ export function openPrintableReport(input: {
       <td>${escapeHtml(row.value)}</td>
     </tr>`).join('')
 
-  report.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(input.title)}</title>
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(input.title)}</title>
     <style>
       *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#17202a;margin:40px}header{border-bottom:3px solid #18b77a;padding-bottom:16px;margin-bottom:24px}h1{font-size:24px;margin:0 0 8px}.meta{color:#5f6b76;font-size:13px;line-height:1.5}.summary{margin:18px 0;padding:12px 16px;background:#eefbf5;border-left:4px solid #18b77a;font-weight:700}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#17202a;color:white;text-align:left;padding:10px}td{border:1px solid #dce2e7;padding:10px;vertical-align:top}.number{width:36px;color:#718096;text-align:center}small{display:block;color:#66737f;font-weight:400;margin-top:4px;white-space:pre-wrap}footer{margin-top:20px;color:#7b8791;font-size:10px}@media print{body{margin:16mm}.no-print{display:none}thead{display:table-header-group}tr{break-inside:avoid}}
     </style></head><body>
@@ -63,7 +60,32 @@ export function openPrintableReport(input: {
     ${input.summary ? `<div class="summary">${escapeHtml(input.summary)}</div>` : ''}
     <table><thead><tr><th>#</th><th>Requisito / campo</th><th>Resultado</th></tr></thead><tbody>${rows}</tbody></table>
     <footer>Documento generado desde ADOC. Usa “Guardar como PDF” en el diálogo de impresión.</footer>
-    <script>window.addEventListener('load',()=>window.print())<\/script></body></html>`)
-  report.document.close()
+    </body></html>`
+
+  const frame = document.createElement('iframe')
+  frame.setAttribute('title', `Imprimir ${input.title}`)
+  frame.style.position = 'fixed'
+  frame.style.width = '1px'
+  frame.style.height = '1px'
+  frame.style.opacity = '0'
+  frame.style.pointerEvents = 'none'
+  document.body.appendChild(frame)
+
+  const printWindow = frame.contentWindow
+  if (!printWindow) {
+    frame.remove()
+    return false
+  }
+  printWindow.document.open()
+  printWindow.document.write(html)
+  printWindow.document.close()
+  printWindow.document.title = input.title
+  const cleanup = () => frame.remove()
+  printWindow.addEventListener('afterprint', cleanup, { once: true })
+  window.setTimeout(() => {
+    printWindow.focus()
+    printWindow.print()
+  }, 100)
+  window.setTimeout(cleanup, 60_000)
   return true
 }

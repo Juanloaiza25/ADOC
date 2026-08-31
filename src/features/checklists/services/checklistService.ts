@@ -28,8 +28,8 @@ export const checklistService = {
     itemId: string
     status: ChecklistResponseStatus
     notes?: string
-  }): Promise<void> {
-    await apiRequest(`/api/company-checklists/${input.companyChecklistId}/responses/${input.itemId}`, { method: 'PUT', body: JSON.stringify({ status: input.status, notes: input.notes }) })
+  }): Promise<{ progress: number }> {
+    return apiRequest<{ progress: number }>(`/api/company-checklists/${input.companyChecklistId}/responses/${input.itemId}`, { method: 'PUT', body: JSON.stringify({ status: input.status, notes: input.notes }) })
   },
 
   async uploadEvidence(input: {

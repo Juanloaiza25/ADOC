@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useProfile } from '@/features/users/hooks/useProfile'
 import { useCompany } from '@/features/companies/hooks/useCompany'
 import { checklistService } from '../services/checklistService'
-import type { Checklist, ChecklistResponseStatus } from '@/shared/types/database'
+import type { Checklist, ChecklistItemResponse, ChecklistResponseStatus } from '@/shared/types/database'
 import { downloadCsv, openPrintableReport, safeFileName } from '@/lib/export'
 
 const STATUS_OPTIONS: Array<{ value: ChecklistResponseStatus; label: string }> = [
@@ -101,17 +101,34 @@ export function ChecklistsPage() {
 
   const saveStatus = async (itemId: string, status: ChecklistResponseStatus) => {
     if (!companyChecklistId) return
+    const notes = notesDraft[itemId] ?? responses.get(itemId)?.notes ?? ''
     setSavingItem(itemId)
     setMessage(null)
     try {
-      await checklistService.saveResponse({
+      const result = await checklistService.saveResponse({
         companyChecklistId,
         itemId,
         status,
-        notes: notesDraft[itemId] ?? responses.get(itemId)?.notes ?? '',
+        notes,
       })
-      await queryClient.invalidateQueries({ queryKey: ['checklist-responses', companyChecklistId] })
-      setMessage('Progreso guardado')
+      queryClient.setQueryData<ChecklistItemResponse[]>(['checklist-responses', companyChecklistId], (current = []) => {
+        const existing = current.find((response) => response.checklist_item_id === itemId)
+        const updated: ChecklistItemResponse = {
+          id: existing?.id ?? `local-${itemId}`,
+          company_checklist_id: companyChecklistId,
+          checklist_item_id: itemId,
+          status,
+          notes,
+          evidence_url: existing?.evidence_url ?? null,
+          evidence_key: existing?.evidence_key ?? null,
+        }
+        return existing
+          ? current.map((response) => response.checklist_item_id === itemId ? updated : response)
+          : [...current, updated]
+      })
+      queryClient.setQueryData(['company-checklist', profile?.company_id, selected?.id], (current: Record<string, unknown> | undefined) => current ? { ...current, progress_percent: result.progress } : current)
+      void queryClient.invalidateQueries({ queryKey: ['checklist-responses', companyChecklistId] })
+      setMessage(`Progreso guardado: ${result.progress}%`)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo guardar el progreso')
     } finally {
