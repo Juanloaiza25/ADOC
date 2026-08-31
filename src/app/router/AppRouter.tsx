@@ -14,6 +14,7 @@ import { ActionsPage } from '@/features/actions/pages/ActionsPage'
 import { ReportsPage } from '@/features/reports/pages/ReportsPage'
 import { TeamPage } from '@/features/team/pages/TeamPage'
 import { AuditPage } from '@/features/audit/pages/AuditPage'
+import { DeadlinesPage } from '@/features/deadlines/pages/DeadlinesPage'
 
 export function AppRouter() {
   return (
@@ -23,6 +24,7 @@ export function AppRouter() {
         <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
         <Route path="/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
         <Route path="/audit" element={<ProtectedRoute><AuditPage /></ProtectedRoute>} />
+        <Route path="/deadlines" element={<ProtectedRoute><DeadlinesPage /></ProtectedRoute>} />
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

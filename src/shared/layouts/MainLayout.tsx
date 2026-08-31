@@ -98,6 +98,9 @@ export function MainLayout() {
       <Link to="/audit" className={navLinkClass}>
         Historial
       </Link>
+      <Link to="/deadlines" className={navLinkClass}>
+        Vencimientos
+      </Link>
       <Link to="/settings/company" className={navLinkClass}>
         Mi empresa
       </Link>
@@ -179,6 +182,7 @@ export function MainLayout() {
                         <Link to="/settings/company" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Mi empresa</Link>
                         <Link to="/team" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Equipo</Link>
                         <Link to="/audit" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Historial</Link>
+                        <Link to="/deadlines" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Vencimientos</Link>
                         <button type="button" onClick={handleLogout} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10">Cerrar sesión</button>
                       </div>
                     )}

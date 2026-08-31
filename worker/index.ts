@@ -113,6 +113,44 @@ app.get('/api/audit', requireAuth, async (c) => {
   return c.json({ entries: results.map((entry) => ({ ...entry, before: entry.before_json ? JSON.parse(String(entry.before_json)) : null, after: entry.after_json ? JSON.parse(String(entry.after_json)) : null })) })
 })
 
+app.get('/api/deadlines', requireAuth, async (c) => {
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null }>()
+  if (!membership?.company_id) return c.json({ deadlines: [] })
+  const { results: deadlines } = await c.env.DB.prepare(`SELECT * FROM compliance_deadlines WHERE company_id=? ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, due_date`).bind(membership.company_id).all()
+  const { results: actionDeadlines } = await c.env.DB.prepare(`SELECT id, title, due_date, status, priority, 'corrective_action' source FROM corrective_actions WHERE company_id=? AND due_date IS NOT NULL AND status IN ('open','in_progress') ORDER BY due_date`).bind(membership.company_id).all()
+  return c.json({ deadlines, actionDeadlines })
+})
+
+app.post('/api/deadlines', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(userId).first<{ company_id: string | null }>()
+  if (!membership?.company_id) return c.json({ error: 'Company required' }, 409)
+  const body = await c.req.json<{ title?: string; type?: string; dueDate?: string; notes?: string }>()
+  if (!body.title?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(body.dueDate ?? '')) return c.json({ error: 'Title and valid due date required' }, 400)
+  if (!['document', 'registration', 'training', 'inspection', 'other'].includes(body.type ?? '')) return c.json({ error: 'Invalid deadline type' }, 400)
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare('INSERT INTO compliance_deadlines (id, company_id, title, type, due_date, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, membership.company_id, body.title.trim(), body.type, body.dueDate, body.notes?.trim() || null, userId).run()
+  const deadline = await c.env.DB.prepare('SELECT * FROM compliance_deadlines WHERE id=?').bind(id).first()
+  await addAudit(c.env, membership.company_id, userId, 'deadline', id, 'created', undefined, deadline)
+  return c.json({ deadline }, 201)
+})
+
+app.patch('/api/deadlines/:id', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(userId).first<{ company_id: string | null }>()
+  const current = membership?.company_id ? await c.env.DB.prepare('SELECT * FROM compliance_deadlines WHERE id=? AND company_id=?').bind(c.req.param('id'), membership.company_id).first<Record<string, unknown>>() : null
+  if (!current) return c.json({ error: 'Deadline not found' }, 404)
+  const body = await c.req.json<{ title?: string; type?: string; dueDate?: string; notes?: string | null; status?: string }>()
+  const type = body.type ?? String(current.type)
+  const status = body.status ?? String(current.status)
+  if (!['document', 'registration', 'training', 'inspection', 'other'].includes(type) || !['pending', 'completed', 'cancelled'].includes(status)) return c.json({ error: 'Invalid deadline values' }, 400)
+  const completedAt = status === 'completed' ? (current.completed_at ?? new Date().toISOString()) : null
+  await c.env.DB.prepare(`UPDATE compliance_deadlines SET title=?, type=?, due_date=?, notes=?, status=?, completed_at=?, updated_at=datetime('now') WHERE id=?`).bind(body.title?.trim() || current.title, type, body.dueDate || current.due_date, body.notes === undefined ? current.notes : body.notes?.trim() || null, status, completedAt, c.req.param('id')).run()
+  const deadline = await c.env.DB.prepare('SELECT * FROM compliance_deadlines WHERE id=?').bind(c.req.param('id')).first()
+  await addAudit(c.env, membership!.company_id, userId, 'deadline', c.req.param('id'), 'updated', current, deadline)
+  return c.json({ deadline })
+})
+
 app.get('/api/team', requireAuth, async (c) => {
   const membership = await c.env.DB.prepare('SELECT company_id, COALESCE(access_role, role) role FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null; role: string }>()
   if (!membership?.company_id) return c.json({ members: [], invitations: [] })
