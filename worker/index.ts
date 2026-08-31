@@ -216,6 +216,25 @@ app.patch('/api/actions/:id', requireAuth, async (c) => {
   return c.json({ action })
 })
 
+app.get('/api/reports/history', requireAuth, async (c) => {
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null }>()
+  if (!membership?.company_id) return c.json({ reports: [] })
+  const { results } = await c.env.DB.prepare(`SELECT re.*, u.full_name generated_by_name, u.email generated_by_email FROM report_exports re JOIN users u ON u.id=re.generated_by WHERE re.company_id=? ORDER BY re.created_at DESC LIMIT 30`).bind(membership.company_id).all()
+  return c.json({ reports: results })
+})
+
+app.post('/api/reports/history', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(userId).first<{ company_id: string | null }>()
+  if (!membership?.company_id) return c.json({ error: 'Company required' }, 409)
+  const body = await c.req.json<{ reportType?: string; title?: string }>()
+  if (!body.reportType?.trim() || !body.title?.trim()) return c.json({ error: 'Report type and title required' }, 400)
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare('INSERT INTO report_exports (id, company_id, report_type, title, generated_by) VALUES (?, ?, ?, ?, ?)').bind(id, membership.company_id, body.reportType.trim(), body.title.trim(), userId).run()
+  const report = await c.env.DB.prepare('SELECT * FROM report_exports WHERE id=?').bind(id).first()
+  return c.json({ report }, 201)
+})
+
 app.get('/api/checklists', requireAuth, async (c) => {
   const { results: checklists } = await c.env.DB.prepare(`
     SELECT c.id, c.name, c.description, r.code regulation_code, r.name regulation_name
