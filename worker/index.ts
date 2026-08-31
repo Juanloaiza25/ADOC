@@ -5,6 +5,11 @@ import type { AppVariables, Env } from './types'
 
 const app = new Hono<{ Bindings: Env; Variables: AppVariables }>()
 
+async function addAudit(env: Env, companyId: string, userId: string, entityType: string, entityId: string, action: string, before?: unknown, after?: unknown) {
+  await env.DB.prepare('INSERT INTO audit_log (id, company_id, user_id, entity_type, entity_id, action, before_json, after_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(crypto.randomUUID(), companyId, userId, entityType, entityId, action, before === undefined ? null : JSON.stringify(before), after === undefined ? null : JSON.stringify(after)).run()
+}
+
 app.use('/api/*', async (c, next) => cors({
   origin: (origin) => c.env.APP_ORIGIN.split(',').includes(origin) ? origin : '',
   credentials: true,
@@ -93,10 +98,19 @@ app.patch('/api/company', requireAuth, async (c) => {
     .bind(c.get('userId')).first<{ company_id: string; role: string }>()
   if (!membership?.company_id) return c.json({ error: 'Owner or admin role required' }, 403)
   if (!body.name?.trim()) return c.json({ error: 'Company name required' }, 400)
+  const before = await c.env.DB.prepare('SELECT * FROM companies WHERE id=?').bind(membership.company_id).first()
   await c.env.DB.prepare("UPDATE companies SET name=?, nit=?, address=?, city=?, department=?, phone=?, sector=?, updated_at=datetime('now') WHERE id=?")
     .bind(body.name.trim(), body.nit || null, body.address || null, body.city || null, body.department || null, body.phone || null, body.sector || null, membership.company_id).run()
   const company = await c.env.DB.prepare('SELECT * FROM companies WHERE id = ?').bind(membership.company_id).first()
+  await addAudit(c.env, membership.company_id, c.get('userId'), 'company', membership.company_id, 'updated', before, company)
   return c.json({ company })
+})
+
+app.get('/api/audit', requireAuth, async (c) => {
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null }>()
+  if (!membership?.company_id) return c.json({ entries: [] })
+  const { results } = await c.env.DB.prepare(`SELECT al.*, u.full_name user_name, u.email user_email FROM audit_log al LEFT JOIN users u ON u.id=al.user_id WHERE al.company_id=? ORDER BY al.created_at DESC LIMIT 100`).bind(membership.company_id).all<Record<string, unknown>>()
+  return c.json({ entries: results.map((entry) => ({ ...entry, before: entry.before_json ? JSON.parse(String(entry.before_json)) : null, after: entry.after_json ? JSON.parse(String(entry.after_json)) : null })) })
 })
 
 app.get('/api/team', requireAuth, async (c) => {
@@ -155,6 +169,7 @@ app.patch('/api/team/members/:id', requireAuth, async (c) => {
     if (Number(owners?.count) <= 1) return c.json({ error: 'La empresa debe conservar al menos un propietario' }, 409)
   }
   await c.env.DB.prepare("UPDATE users SET access_role=?, role=CASE WHEN ? IN ('owner','admin') THEN ? ELSE 'member' END, updated_at=datetime('now') WHERE id=?").bind(body.role, body.role, body.role, target.id).run()
+  await addAudit(c.env, actor.company_id, c.get('userId'), 'team_member', target.id, 'role_updated', { role: target.role }, { role: body.role })
   return c.json({ ok: true })
 })
 
@@ -252,6 +267,7 @@ app.post('/api/actions', requireAuth, async (c) => {
     throw error
   }
   const action = await c.env.DB.prepare('SELECT * FROM corrective_actions WHERE id=?').bind(id).first()
+  await addAudit(c.env, membership.company_id, userId, 'corrective_action', id, 'created', undefined, action)
   return c.json({ action }, 201)
 })
 
@@ -272,6 +288,7 @@ app.patch('/api/actions/:id', requireAuth, async (c) => {
   await c.env.DB.prepare(`UPDATE corrective_actions SET title=?, description=?, assigned_to=?, due_date=?, priority=?, status=?, completed_at=?, updated_at=datetime('now') WHERE id=?`)
     .bind(body.title?.trim() || current.title, body.description === undefined ? current.description : body.description?.trim() || null, assignedTo || null, body.dueDate === undefined ? current.due_date : body.dueDate || null, priority, status, completedAt, c.req.param('id')).run()
   const action = await c.env.DB.prepare('SELECT * FROM corrective_actions WHERE id=?').bind(c.req.param('id')).first()
+  await addAudit(c.env, membership!.company_id, c.get('userId'), 'corrective_action', c.req.param('id'), 'updated', current, action)
   return c.json({ action })
 })
 
@@ -326,16 +343,19 @@ app.get('/api/company-checklists/:id/responses', requireAuth, async (c) => {
 app.put('/api/company-checklists/:id/responses/:itemId', requireAuth, async (c) => {
   const companyChecklistId = c.req.param('id')
   const itemId = c.req.param('itemId')
-  const allowed = await c.env.DB.prepare(`SELECT cc.id FROM company_checklists cc JOIN users u ON u.company_id=cc.company_id WHERE cc.id=? AND u.id=?`).bind(companyChecklistId, c.get('userId')).first()
+  const allowed = await c.env.DB.prepare(`SELECT cc.id, cc.company_id FROM company_checklists cc JOIN users u ON u.company_id=cc.company_id WHERE cc.id=? AND u.id=?`).bind(companyChecklistId, c.get('userId')).first<{ id: string; company_id: string }>()
   if (!allowed) return c.json({ error: 'Not found' }, 404)
   const body = await c.req.json<{ status?: string; notes?: string }>()
   if (!['compliant', 'non_compliant', 'not_applicable', 'pending'].includes(body.status ?? '')) return c.json({ error: 'Invalid status' }, 400)
+  const before = await c.env.DB.prepare('SELECT * FROM checklist_responses WHERE company_checklist_id=? AND checklist_item_id=?').bind(companyChecklistId, itemId).first()
   await c.env.DB.prepare(`INSERT INTO checklist_responses (id, company_checklist_id, checklist_item_id, status, notes, responded_by)
     VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(company_checklist_id, checklist_item_id) DO UPDATE SET status=excluded.status, notes=excluded.notes, responded_by=excluded.responded_by, updated_at=datetime('now')`)
     .bind(crypto.randomUUID(), companyChecklistId, itemId, body.status, body.notes?.trim() || null, c.get('userId')).run()
   const totals = await c.env.DB.prepare(`SELECT COUNT(ci.id) total, SUM(CASE WHEN cr.status IN ('compliant','non_compliant','not_applicable') THEN 1 ELSE 0 END) answered FROM company_checklists cc JOIN checklist_items ci ON ci.checklist_id=cc.checklist_id LEFT JOIN checklist_responses cr ON cr.company_checklist_id=cc.id AND cr.checklist_item_id=ci.id WHERE cc.id=?`).bind(companyChecklistId).first<{ total: number; answered: number }>()
   const progress = totals?.total ? Math.round((totals.answered ?? 0) * 100 / totals.total) : 0
   await c.env.DB.prepare("UPDATE company_checklists SET progress_percent=?, status=?, updated_at=datetime('now') WHERE id=?").bind(progress, progress === 100 ? 'completed' : 'in_progress', companyChecklistId).run()
+  const after = await c.env.DB.prepare('SELECT * FROM checklist_responses WHERE company_checklist_id=? AND checklist_item_id=?').bind(companyChecklistId, itemId).first()
+  await addAudit(c.env, allowed.company_id, c.get('userId'), 'checklist_response', String((after as Record<string, unknown>)?.id ?? itemId), before ? 'updated' : 'created', before, after)
   return c.json({ ok: true, progress })
 })
 
@@ -389,11 +409,13 @@ app.put('/api/forms/:formId/submission', requireAuth, async (c) => {
   const body = await c.req.json<{ data?: Record<string, string | number>; status?: 'draft' | 'submitted' }>()
   if (!body.data || !['draft', 'submitted'].includes(body.status ?? '')) return c.json({ error: 'Invalid submission' }, 400)
   const id = crypto.randomUUID()
+  const before = await c.env.DB.prepare('SELECT * FROM form_submissions WHERE company_id=? AND form_id=?').bind(membership.company_id, c.req.param('formId')).first()
   const submittedAt = body.status === 'submitted' ? new Date().toISOString() : null
   await c.env.DB.prepare(`INSERT INTO form_submissions (id, company_id, form_id, data_json, status, submitted_by, submitted_at)
     VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(company_id, form_id) DO UPDATE SET data_json=excluded.data_json, status=excluded.status, submitted_by=excluded.submitted_by, submitted_at=excluded.submitted_at, updated_at=datetime('now')`)
     .bind(id, membership.company_id, c.req.param('formId'), JSON.stringify(body.data), body.status, c.get('userId'), submittedAt).run()
   const submission = await c.env.DB.prepare('SELECT * FROM form_submissions WHERE company_id=? AND form_id=?').bind(membership.company_id, c.req.param('formId')).first<Record<string, unknown>>()
+  await addAudit(c.env, membership.company_id, c.get('userId'), 'form_submission', String(submission?.id ?? id), before ? 'updated' : 'created', before, submission)
   return c.json({ submission: { ...submission, data: JSON.parse(submission!.data_json as string) } })
 })
 
