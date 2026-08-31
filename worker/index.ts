@@ -52,7 +52,7 @@ app.get('/api/auth/session', requireAuth, async (c) => {
 
 app.get('/api/profile', requireAuth, async (c) => {
   const profile = await c.env.DB.prepare(
-    'SELECT id, email, full_name, avatar_key, company_id, role, created_at, updated_at FROM users WHERE id = ?',
+    'SELECT id, email, full_name, avatar_key, company_id, COALESCE(access_role, role) role, created_at, updated_at FROM users WHERE id = ?',
   ).bind(c.get('userId')).first()
   return c.json({ profile })
 })
@@ -97,6 +97,65 @@ app.patch('/api/company', requireAuth, async (c) => {
     .bind(body.name.trim(), body.nit || null, body.address || null, body.city || null, body.department || null, body.phone || null, body.sector || null, membership.company_id).run()
   const company = await c.env.DB.prepare('SELECT * FROM companies WHERE id = ?').bind(membership.company_id).first()
   return c.json({ company })
+})
+
+app.get('/api/team', requireAuth, async (c) => {
+  const membership = await c.env.DB.prepare('SELECT company_id, COALESCE(access_role, role) role FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null; role: string }>()
+  if (!membership?.company_id) return c.json({ members: [], invitations: [] })
+  const { results: members } = await c.env.DB.prepare(`SELECT id, email, full_name, COALESCE(access_role, role) role, created_at FROM users WHERE company_id=? ORDER BY CASE COALESCE(access_role, role) WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, full_name`).bind(membership.company_id).all()
+  const { results: invitations } = await c.env.DB.prepare(`SELECT id, email, role, token, expires_at, accepted_at, created_at FROM company_invitations WHERE company_id=? AND accepted_at IS NULL AND expires_at > datetime('now') ORDER BY created_at DESC`).bind(membership.company_id).all()
+  return c.json({ members, invitations, canManage: ['owner', 'admin'].includes(membership.role) })
+})
+
+app.post('/api/team/invitations', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const membership = await c.env.DB.prepare('SELECT company_id, COALESCE(access_role, role) role FROM users WHERE id=?').bind(userId).first<{ company_id: string | null; role: string }>()
+  if (!membership?.company_id || !['owner', 'admin'].includes(membership.role)) return c.json({ error: 'Owner or admin role required' }, 403)
+  const body = await c.req.json<{ email?: string; role?: string }>()
+  const email = body.email?.trim().toLowerCase()
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return c.json({ error: 'Valid email required' }, 400)
+  if (!['admin', 'auditor', 'collaborator'].includes(body.role ?? '')) return c.json({ error: 'Invalid role' }, 400)
+  const existing = await c.env.DB.prepare('SELECT id FROM users WHERE company_id=? AND email=?').bind(membership.company_id, email).first()
+  if (existing) return c.json({ error: 'El usuario ya pertenece al equipo' }, 409)
+  const id = crypto.randomUUID()
+  const token = `${crypto.randomUUID()}${crypto.randomUUID()}`.replace(/-/g, '')
+  const expires = new Date(Date.now() + 7 * 86400000).toISOString()
+  try {
+    await c.env.DB.prepare('INSERT INTO company_invitations (id, company_id, email, role, token, invited_by, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, membership.company_id, email, body.role, token, userId, expires).run()
+  } catch (error) {
+    if (String(error).includes('UNIQUE')) return c.json({ error: 'Ya existe una invitación pendiente para este correo' }, 409)
+    throw error
+  }
+  return c.json({ invitation: { id, email, role: body.role, token, expires_at: expires } }, 201)
+})
+
+app.post('/api/team/invitations/:token/accept', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const user = await c.env.DB.prepare('SELECT email, company_id FROM users WHERE id=?').bind(userId).first<{ email: string; company_id: string | null }>()
+  const invitation = await c.env.DB.prepare(`SELECT * FROM company_invitations WHERE token=? AND accepted_at IS NULL AND expires_at > datetime('now')`).bind(c.req.param('token')).first<Record<string, unknown>>()
+  if (!invitation) return c.json({ error: 'Invitation not found or expired' }, 404)
+  if (!user || user.email.toLowerCase() !== String(invitation.email).toLowerCase()) return c.json({ error: 'La invitación pertenece a otro correo' }, 403)
+  if (user.company_id && user.company_id !== invitation.company_id) return c.json({ error: 'El usuario ya pertenece a otra empresa' }, 409)
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE users SET company_id=?, access_role=?, role='member', updated_at=datetime('now') WHERE id=?").bind(invitation.company_id, invitation.role, userId),
+    c.env.DB.prepare("UPDATE company_invitations SET accepted_at=datetime('now') WHERE id=?").bind(invitation.id),
+  ])
+  return c.json({ ok: true })
+})
+
+app.patch('/api/team/members/:id', requireAuth, async (c) => {
+  const actor = await c.env.DB.prepare('SELECT company_id, COALESCE(access_role, role) role FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null; role: string }>()
+  if (!actor?.company_id || !['owner', 'admin'].includes(actor.role)) return c.json({ error: 'Owner or admin role required' }, 403)
+  const target = await c.env.DB.prepare('SELECT id, COALESCE(access_role, role) role FROM users WHERE id=? AND company_id=?').bind(c.req.param('id'), actor.company_id).first<{ id: string; role: string }>()
+  if (!target) return c.json({ error: 'Member not found' }, 404)
+  const body = await c.req.json<{ role?: string }>()
+  if (!['owner', 'admin', 'auditor', 'collaborator'].includes(body.role ?? '')) return c.json({ error: 'Invalid role' }, 400)
+  if (target.role === 'owner' && body.role !== 'owner') {
+    const owners = await c.env.DB.prepare("SELECT COUNT(*) count FROM users WHERE company_id=? AND COALESCE(access_role, role)='owner'").bind(actor.company_id).first<{ count: number }>()
+    if (Number(owners?.count) <= 1) return c.json({ error: 'La empresa debe conservar al menos un propietario' }, 409)
+  }
+  await c.env.DB.prepare("UPDATE users SET access_role=?, role=CASE WHEN ? IN ('owner','admin') THEN ? ELSE 'member' END, updated_at=datetime('now') WHERE id=?").bind(body.role, body.role, body.role, target.id).run()
+  return c.json({ ok: true })
 })
 
 app.get('/api/dashboard', requireAuth, async (c) => {

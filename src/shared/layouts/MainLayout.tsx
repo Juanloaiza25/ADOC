@@ -92,6 +92,9 @@ export function MainLayout() {
       <Link to="/reports" className={navLinkClass}>
         Reportes
       </Link>
+      <Link to="/team" className={navLinkClass}>
+        Equipo
+      </Link>
       <Link to="/settings/company" className={navLinkClass}>
         Mi empresa
       </Link>
@@ -171,6 +174,7 @@ export function MainLayout() {
                     {profileOpen && (
                       <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-gray-800 bg-dark-900 p-1.5 shadow-2xl shadow-black/30">
                         <Link to="/settings/company" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Mi empresa</Link>
+                        <Link to="/team" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Equipo</Link>
                         <button type="button" onClick={handleLogout} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10">Cerrar sesión</button>
                       </div>
                     )}

@@ -12,6 +12,7 @@ import { ChecklistsPage } from '@/features/checklists/pages/ChecklistsPage'
 import { FormsPage } from '@/features/forms/pages/FormsPage'
 import { ActionsPage } from '@/features/actions/pages/ActionsPage'
 import { ReportsPage } from '@/features/reports/pages/ReportsPage'
+import { TeamPage } from '@/features/team/pages/TeamPage'
 
 export function AppRouter() {
   return (
@@ -19,6 +20,7 @@ export function AppRouter() {
       <Route element={<MainLayout />}>
         <Route path="/actions" element={<ProtectedRoute><ActionsPage /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+        <Route path="/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
