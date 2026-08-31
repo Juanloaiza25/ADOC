@@ -3,6 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/app/store/useAuthStore'
 import { useProfile } from '@/features/users/hooks/useProfile'
 import { authService } from '@/features/auth/services/authService'
+import { NotificationBell } from '@/features/notifications/components/NotificationBell'
 
 const FOOTER_LINKS = {
   Producto: [
@@ -166,6 +167,7 @@ export function MainLayout() {
               {!isAuthenticated && navItems}
               {isAuthenticated ? (
                 <>
+                  <NotificationBell />
                   <div className="relative">
                     <button
                       type="button"
@@ -196,21 +198,20 @@ export function MainLayout() {
               ) : mobileAuthItems}
             </div>
 
-            {/* Mobile hamburger */}
-            <button
+            {/* Mobile actions */}
+            <div className="flex items-center gap-2 lg:hidden">
+              {isAuthenticated && <NotificationBell />}
+              <button
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-800 transition-colors"
+              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-800 transition-colors"
               aria-label="Menú"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                {mobileOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  {mobileOpen ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />}
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 

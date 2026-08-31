@@ -132,6 +132,37 @@ app.get('/api/deadlines', requireAuth, async (c) => {
   return c.json({ deadlines, actionDeadlines })
 })
 
+app.get('/api/notifications', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(userId).first<{ company_id: string | null }>()
+  if (!membership?.company_id) return c.json({ notifications: [], unread: 0 })
+  const { results: deadlines } = await c.env.DB.prepare(`SELECT id, title, due_date, type FROM compliance_deadlines WHERE company_id=? AND status='pending' AND due_date <= date('now','+30 days') ORDER BY due_date`).bind(membership.company_id).all<Record<string, unknown>>()
+  const { results: actions } = await c.env.DB.prepare(`SELECT id, title, due_date, priority FROM corrective_actions WHERE company_id=? AND status IN ('open','in_progress') AND due_date IS NOT NULL AND due_date <= date('now','+14 days') ORDER BY due_date`).bind(membership.company_id).all<Record<string, unknown>>()
+  const { results: reads } = await c.env.DB.prepare('SELECT notification_key FROM notification_reads WHERE user_id=?').bind(userId).all<{ notification_key: string }>()
+  const readKeys = new Set(reads.map((item) => item.notification_key))
+  const today = new Date().toISOString().slice(0, 10)
+  const daysUntil = (date: string) => Math.ceil((new Date(`${date}T00:00:00Z`).getTime() - new Date(`${today}T00:00:00Z`).getTime()) / 86400000)
+  const notifications = [
+    ...deadlines.map((item) => {
+      const dueDate = String(item.due_date); const days = daysUntil(dueDate); const key = `deadline:${item.id}:${dueDate}`
+      return { key, source: 'deadline', sourceId: item.id, title: String(item.title), message: days < 0 ? `Venció hace ${Math.abs(days)} día${Math.abs(days) === 1 ? '' : 's'}` : days === 0 ? 'Vence hoy' : `Vence en ${days} día${days === 1 ? '' : 's'}`, dueDate, severity: days < 0 ? 'critical' : days <= 7 ? 'warning' : 'info', href: '/deadlines', read: readKeys.has(key) }
+    }),
+    ...actions.map((item) => {
+      const dueDate = String(item.due_date); const days = daysUntil(dueDate); const key = `action:${item.id}:${dueDate}`
+      return { key, source: 'action', sourceId: item.id, title: String(item.title), message: days < 0 ? `Acción vencida hace ${Math.abs(days)} día${Math.abs(days) === 1 ? '' : 's'}` : days === 0 ? 'La acción vence hoy' : `La acción vence en ${days} día${days === 1 ? '' : 's'}`, dueDate, severity: days < 0 || item.priority === 'critical' ? 'critical' : days <= 3 ? 'warning' : 'info', href: '/actions', read: readKeys.has(key) }
+    }),
+  ].sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+  return c.json({ notifications, unread: notifications.filter((item) => !item.read).length })
+})
+
+app.post('/api/notifications/read', requireAuth, async (c) => {
+  const body = await c.req.json<{ keys?: string[] }>()
+  const keys = [...new Set(body.keys ?? [])].filter((key) => /^(deadline|action):[a-zA-Z0-9-]+:\d{4}-\d{2}-\d{2}$/.test(key)).slice(0, 100)
+  if (!keys.length) return c.json({ ok: true })
+  await c.env.DB.batch(keys.map((key) => c.env.DB.prepare("INSERT INTO notification_reads (user_id, notification_key) VALUES (?, ?) ON CONFLICT(user_id, notification_key) DO UPDATE SET read_at=datetime('now')").bind(c.get('userId'), key)))
+  return c.json({ ok: true })
+})
+
 app.post('/api/deadlines', requireAuth, async (c) => {
   if (!(await canEditCompliance(c.env, c.get('userId')))) return c.json({ error: 'Los auditores tienen acceso de solo lectura' }, 403)
   const userId = c.get('userId')
