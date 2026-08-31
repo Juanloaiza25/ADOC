@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useProfile } from '@/features/users/hooks/useProfile'
+import { useCompany } from '@/features/companies/hooks/useCompany'
 import { checklistService } from '../services/checklistService'
 import type { Checklist, ChecklistResponseStatus } from '@/shared/types/database'
+import { downloadCsv, openPrintableReport, safeFileName } from '@/lib/export'
 
 const STATUS_OPTIONS: Array<{ value: ChecklistResponseStatus; label: string }> = [
   { value: 'pending', label: 'Pendiente' },
@@ -14,6 +16,7 @@ const STATUS_OPTIONS: Array<{ value: ChecklistResponseStatus; label: string }> =
 
 export function ChecklistsPage() {
   const { profile, isLoading: profileLoading } = useProfile()
+  const { company } = useCompany(profile?.company_id)
   const queryClient = useQueryClient()
   const [selected, setSelected] = useState<Checklist | null>(null)
   const [companyChecklistId, setCompanyChecklistId] = useState<string | null>(null)
@@ -56,6 +59,45 @@ export function ChecklistsPage() {
     return status && status !== 'pending'
   }).length ?? 0
   const progress = selected?.items.length ? Math.round((answered / selected.items.length) * 100) : 0
+
+  const exportRows = () => (selected?.items ?? []).map((item) => {
+    const response = responses.get(item.id)
+    const status = STATUS_OPTIONS.find((option) => option.value === (response?.status ?? 'pending'))?.label ?? 'Pendiente'
+    return {
+      title: item.title,
+      description: item.description ?? '',
+      required: item.required ? 'Sí' : 'No',
+      status,
+      notes: notesDraft[item.id] ?? response?.notes ?? '',
+      evidence: response?.evidence_url ? 'Adjunta' : 'Sin evidencia',
+    }
+  })
+
+  const exportChecklistCsv = () => {
+    if (!selected) return
+    const rows = exportRows()
+    downloadCsv(
+      `checklist-${safeFileName(selected.name)}.csv`,
+      ['Requisito', 'Descripción', 'Obligatorio', 'Estado', 'Notas', 'Evidencia'],
+      rows.map((row) => [row.title, row.description, row.required, row.status, row.notes, row.evidence]),
+    )
+  }
+
+  const printChecklist = () => {
+    if (!selected) return
+    const opened = openPrintableReport({
+      title: selected.name,
+      subtitle: selected.regulation ? `${selected.regulation.code} · ${selected.regulation.name}` : undefined,
+      company: company?.name,
+      summary: `Avance: ${progress}% · ${answered} de ${selected.items.length} requisitos evaluados`,
+      rows: exportRows().map((row) => ({
+        label: row.title,
+        detail: [row.description, row.notes && `Notas: ${row.notes}`, `Evidencia: ${row.evidence}`].filter(Boolean).join('\n'),
+        value: row.status,
+      })),
+    })
+    if (!opened) setMessage('El navegador bloqueó la ventana de impresión. Habilita las ventanas emergentes para ADOC.')
+  }
 
   const saveStatus = async (itemId: string, status: ChecklistResponseStatus) => {
     if (!companyChecklistId) return
@@ -154,9 +196,13 @@ export function ChecklistsPage() {
 
         <section className="rounded-2xl border border-gray-800 bg-dark-900/60 p-5 sm:p-6">
           <div className="mb-6">
-            <div className="flex items-end justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div><h2 className="text-xl font-semibold text-white">{selected.name}</h2><p className="mt-1 text-sm text-gray-400">{selected.description}</p></div>
-              <strong className="text-primary-400">{progress}%</strong>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={exportChecklistCsv} className="rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-300 hover:border-primary-500 hover:text-primary-400">Exportar CSV</button>
+                <button type="button" onClick={printChecklist} className="rounded-lg bg-primary-500/10 px-3 py-2 text-sm font-medium text-primary-400 hover:bg-primary-500/20">Imprimir / PDF</button>
+                <strong className="ml-1 text-primary-400">{progress}%</strong>
+              </div>
             </div>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-dark-800"><div className="h-full bg-primary-500 transition-all" style={{ width: `${progress}%` }} /></div>
             {message && <p aria-live="polite" className="mt-2 text-sm text-gray-400">{message}</p>}

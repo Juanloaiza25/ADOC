@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useProfile } from '@/features/users/hooks/useProfile'
+import { useCompany } from '@/features/companies/hooks/useCompany'
 import { formService } from '../services/formService'
 import type { FormField, RegulatoryForm } from '@/shared/types/database'
+import { downloadCsv, openPrintableReport, safeFileName } from '@/lib/export'
 
 export function FormsPage() {
   const { profile, isLoading: profileLoading } = useProfile()
+  const { company } = useCompany(profile?.company_id)
   const queryClient = useQueryClient()
   const [selected, setSelected] = useState<RegulatoryForm | null>(null)
   const [values, setValues] = useState<Record<string, string | number>>({})
@@ -43,6 +46,31 @@ export function FormsPage() {
     }
   }
 
+  const exportFormCsv = () => {
+    if (!selected) return
+    downloadCsv(
+      `formulario-${safeFileName(selected.name)}.csv`,
+      ['Campo', 'Valor', 'Obligatorio'],
+      selected.schema.fields.map((field) => [field.label, values[field.name] ?? '', field.required ? 'Sí' : 'No']),
+    )
+  }
+
+  const printForm = () => {
+    if (!selected) return
+    const completed = selected.schema.fields.filter((field) => String(values[field.name] ?? '').trim()).length
+    const opened = openPrintableReport({
+      title: selected.name,
+      subtitle: selected.regulation ? `${selected.regulation.code} · ${selected.regulation.name}` : selected.description ?? undefined,
+      company: company?.name,
+      summary: `Estado: ${submissionQuery.data?.status ?? 'Sin guardar'} · ${completed} de ${selected.schema.fields.length} campos diligenciados`,
+      rows: selected.schema.fields.map((field) => ({
+        label: `${field.label}${field.required ? ' *' : ''}`,
+        value: values[field.name] || '—',
+      })),
+    })
+    if (!opened) setMessage('El navegador bloqueó la ventana de impresión. Habilita las ventanas emergentes para ADOC.')
+  }
+
   const renderField = (field: FormField) => {
     const common = { id: field.name, required: field.required, value: values[field.name] ?? '', onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setValues((current) => ({ ...current, [field.name]: event.target.value })), className: 'w-full rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-white placeholder-gray-600 focus:border-primary-500 focus:outline-none' }
     if (field.type === 'textarea') return <textarea {...common} rows={4} placeholder={field.placeholder} />
@@ -61,7 +89,13 @@ export function FormsPage() {
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="space-y-2">{formsQuery.data?.map((form) => <button key={form.id} type="button" onClick={() => setSelected(form)} className={`w-full rounded-xl border p-4 text-left ${selected.id === form.id ? 'border-primary-500/50 bg-primary-500/10' : 'border-gray-800 bg-dark-900/50 hover:border-gray-700'}`}><span className="block text-xs font-semibold text-primary-400">{form.regulation?.code}</span><span className="mt-1 block font-medium text-white">{form.name}</span></button>)}</aside>
         <section className="rounded-2xl border border-gray-800 bg-dark-900/60 p-6">
-          <div className="mb-6"><h2 className="text-xl font-semibold text-white">{selected.name}</h2><p className="mt-1 text-sm text-gray-400">{selected.description}</p>{submissionQuery.data && <span className="mt-3 inline-block rounded-full bg-dark-800 px-3 py-1 text-xs text-gray-400">Estado: {submissionQuery.data.status}</span>}</div>
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div><h2 className="text-xl font-semibold text-white">{selected.name}</h2><p className="mt-1 text-sm text-gray-400">{selected.description}</p>{submissionQuery.data && <span className="mt-3 inline-block rounded-full bg-dark-800 px-3 py-1 text-xs text-gray-400">Estado: {submissionQuery.data.status}</span>}</div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <button type="button" onClick={exportFormCsv} className="rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-300 hover:border-primary-500 hover:text-primary-400">Exportar CSV</button>
+              <button type="button" onClick={printForm} className="rounded-lg bg-primary-500/10 px-3 py-2 text-sm font-medium text-primary-400 hover:bg-primary-500/20">Imprimir / PDF</button>
+            </div>
+          </div>
           <form onSubmit={(event) => { event.preventDefault(); void persist(true) }} className="space-y-5">
             {selected.schema.fields.map((field) => <div key={field.name}><label htmlFor={field.name} className="mb-1 block text-sm font-medium text-gray-300">{field.label}{field.required && ' *'}</label>{renderField(field)}</div>)}
             {message && <p aria-live="polite" className="text-sm text-gray-400">{message}</p>}
