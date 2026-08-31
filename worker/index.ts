@@ -10,6 +10,11 @@ async function addAudit(env: Env, companyId: string, userId: string, entityType:
     .bind(crypto.randomUUID(), companyId, userId, entityType, entityId, action, before === undefined ? null : JSON.stringify(before), after === undefined ? null : JSON.stringify(after)).run()
 }
 
+async function isPlatformAdmin(env: Env, userId: string) {
+  const user = await env.DB.prepare('SELECT is_platform_admin FROM users WHERE id=?').bind(userId).first<{ is_platform_admin: number }>()
+  return user?.is_platform_admin === 1
+}
+
 app.use('/api/*', async (c, next) => cors({
   origin: (origin) => c.env.APP_ORIGIN.split(',').includes(origin) ? origin : '',
   credentials: true,
@@ -35,11 +40,12 @@ app.post('/api/auth/register', async (c) => {
 
 app.post('/api/auth/login', async (c) => {
   const body = await c.req.json<{ email?: string; password?: string }>()
-  const user = await c.env.DB.prepare('SELECT id, email, full_name, password_hash FROM users WHERE email = ?')
-    .bind(body.email?.trim().toLowerCase() ?? '').first<{ id: string; email: string; full_name: string | null; password_hash: string }>()
+  const user = await c.env.DB.prepare('SELECT id, email, full_name, password_hash, suspended_at FROM users WHERE email = ?')
+    .bind(body.email?.trim().toLowerCase() ?? '').first<{ id: string; email: string; full_name: string | null; password_hash: string; suspended_at: string | null }>()
   if (!user || !body.password || !(await verifyPassword(body.password, user.password_hash))) {
     return c.json({ error: 'Invalid email or password' }, 401)
   }
+  if (user.suspended_at) return c.json({ error: 'Account suspended' }, 403)
   await createSession(c, user.id)
   return c.json({ user: { id: user.id, email: user.email, name: user.full_name } })
 })
@@ -57,7 +63,7 @@ app.get('/api/auth/session', requireAuth, async (c) => {
 
 app.get('/api/profile', requireAuth, async (c) => {
   const profile = await c.env.DB.prepare(
-    'SELECT id, email, full_name, avatar_key, company_id, COALESCE(access_role, role) role, created_at, updated_at FROM users WHERE id = ?',
+    'SELECT id, email, full_name, avatar_key, company_id, COALESCE(access_role, role) role, is_platform_admin, created_at, updated_at FROM users WHERE id = ?',
   ).bind(c.get('userId')).first()
   return c.json({ profile })
 })
@@ -460,6 +466,69 @@ app.put('/api/forms/:formId/submission', requireAuth, async (c) => {
   const submission = await c.env.DB.prepare('SELECT * FROM form_submissions WHERE company_id=? AND form_id=?').bind(membership.company_id, c.req.param('formId')).first<Record<string, unknown>>()
   await addAudit(c.env, membership.company_id, c.get('userId'), 'form_submission', String(submission?.id ?? id), before ? 'updated' : 'created', before, submission)
   return c.json({ submission: { ...submission, data: JSON.parse(submission!.data_json as string) } })
+})
+
+app.get('/api/admin/overview', requireAuth, async (c) => {
+  if (!(await isPlatformAdmin(c.env, c.get('userId')))) return c.json({ error: 'Platform admin required' }, 403)
+  const [users, companies, actions, submissions] = await Promise.all([
+    c.env.DB.prepare('SELECT COUNT(*) count FROM users').first<{ count: number }>(),
+    c.env.DB.prepare('SELECT COUNT(*) count FROM companies').first<{ count: number }>(),
+    c.env.DB.prepare("SELECT COUNT(*) count FROM corrective_actions WHERE status IN ('open','in_progress')").first<{ count: number }>(),
+    c.env.DB.prepare("SELECT COUNT(*) count FROM form_submissions WHERE status='submitted'").first<{ count: number }>(),
+  ])
+  const { results: userList } = await c.env.DB.prepare(`SELECT u.id, u.email, u.full_name, COALESCE(u.access_role,u.role) role, u.is_platform_admin, u.suspended_at, u.created_at, c.name company_name FROM users u LEFT JOIN companies c ON c.id=u.company_id ORDER BY u.created_at DESC`).all()
+  const { results: companyList } = await c.env.DB.prepare(`SELECT c.*, COUNT(u.id) member_count FROM companies c LEFT JOIN users u ON u.company_id=c.id GROUP BY c.id ORDER BY c.created_at DESC`).all()
+  const { results: regulations } = await c.env.DB.prepare('SELECT * FROM regulations ORDER BY code').all()
+  return c.json({ stats: { users: Number(users?.count ?? 0), companies: Number(companies?.count ?? 0), activeActions: Number(actions?.count ?? 0), submittedForms: Number(submissions?.count ?? 0) }, users: userList, companies: companyList, regulations })
+})
+
+app.patch('/api/admin/users/:id/suspension', requireAuth, async (c) => {
+  const actorId = c.get('userId')
+  if (!(await isPlatformAdmin(c.env, actorId))) return c.json({ error: 'Platform admin required' }, 403)
+  const body = await c.req.json<{ suspended?: boolean }>()
+  if (c.req.param('id') === actorId && body.suspended) return c.json({ error: 'No puedes suspender tu propia cuenta' }, 409)
+  await c.env.DB.prepare("UPDATE users SET suspended_at=CASE WHEN ? THEN datetime('now') ELSE NULL END, updated_at=datetime('now') WHERE id=?").bind(Boolean(body.suspended), c.req.param('id')).run()
+  if (body.suspended) await c.env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(c.req.param('id')).run()
+  return c.json({ ok: true })
+})
+
+app.post('/api/admin/users/:id/reset-password', requireAuth, async (c) => {
+  if (!(await isPlatformAdmin(c.env, c.get('userId')))) return c.json({ error: 'Platform admin required' }, 403)
+  const body = await c.req.json<{ temporaryPassword?: string }>()
+  if (!body.temporaryPassword || body.temporaryPassword.length < 10) return c.json({ error: 'Temporary password must have at least 10 characters' }, 400)
+  await c.env.DB.prepare("UPDATE users SET password_hash=?, updated_at=datetime('now') WHERE id=?").bind(await hashPassword(body.temporaryPassword), c.req.param('id')).run()
+  await c.env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(c.req.param('id')).run()
+  return c.json({ ok: true })
+})
+
+app.post('/api/admin/regulations', requireAuth, async (c) => {
+  if (!(await isPlatformAdmin(c.env, c.get('userId')))) return c.json({ error: 'Platform admin required' }, 403)
+  const body = await c.req.json<{ code?: string; name?: string; description?: string; entity?: string }>()
+  if (!body.code?.trim() || !body.name?.trim()) return c.json({ error: 'Code and name required' }, 400)
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare('INSERT INTO regulations (id, code, name, description, entity) VALUES (?, ?, ?, ?, ?)').bind(id, body.code.trim(), body.name.trim(), body.description?.trim() || null, body.entity?.trim() || null).run()
+  return c.json({ id }, 201)
+})
+
+app.post('/api/admin/checklists', requireAuth, async (c) => {
+  if (!(await isPlatformAdmin(c.env, c.get('userId')))) return c.json({ error: 'Platform admin required' }, 403)
+  const body = await c.req.json<{ regulationId?: string; name?: string; description?: string; items?: Array<{ title?: string; description?: string; required?: boolean }> }>()
+  if (!body.regulationId || !body.name?.trim() || !body.items?.length || body.items.some((item) => !item.title?.trim())) return c.json({ error: 'Regulation, name and items required' }, 400)
+  const id = crypto.randomUUID()
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO checklists (id, regulation_id, name, description) VALUES (?, ?, ?, ?)').bind(id, body.regulationId, body.name.trim(), body.description?.trim() || null),
+    ...body.items.map((item, index) => c.env.DB.prepare('INSERT INTO checklist_items (id, checklist_id, title, description, sort_order, required) VALUES (?, ?, ?, ?, ?, ?)').bind(crypto.randomUUID(), id, item.title!.trim(), item.description?.trim() || null, index + 1, item.required === false ? 0 : 1)),
+  ])
+  return c.json({ id }, 201)
+})
+
+app.post('/api/admin/forms', requireAuth, async (c) => {
+  if (!(await isPlatformAdmin(c.env, c.get('userId')))) return c.json({ error: 'Platform admin required' }, 403)
+  const body = await c.req.json<{ regulationId?: string; name?: string; description?: string; type?: string; fields?: unknown[] }>()
+  if (!body.name?.trim() || !body.type?.trim() || !body.fields?.length) return c.json({ error: 'Name, type and fields required' }, 400)
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare('INSERT INTO forms (id, regulation_id, name, description, type, schema_json) VALUES (?, ?, ?, ?, ?, ?)').bind(id, body.regulationId || null, body.name.trim(), body.description?.trim() || null, body.type.trim(), JSON.stringify({ fields: body.fields })).run()
+  return c.json({ id }, 201)
 })
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404))

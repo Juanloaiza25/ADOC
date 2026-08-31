@@ -5,6 +5,7 @@ export interface Profile {
   avatar_url: string | null
   company_id: string | null
   role: 'owner' | 'admin' | 'auditor' | 'collaborator'
+  is_platform_admin?: number
   created_at: string
   updated_at: string
 }

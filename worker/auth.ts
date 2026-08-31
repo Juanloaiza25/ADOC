@@ -58,7 +58,7 @@ export async function requireAuth(c: Context<{ Bindings: Env; Variables: AppVari
   const token = getCookie(c, 'adoc_session')
   if (!token) return c.json({ error: 'Authentication required' }, 401)
   const session = await c.env.DB.prepare(
-    `SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > datetime('now')`,
+    `SELECT s.user_id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash = ? AND s.expires_at > datetime('now') AND u.suspended_at IS NULL`,
   ).bind(await sha256(token)).first<{ user_id: string }>()
   if (!session) {
     deleteCookie(c, 'adoc_session', { path: '/' })
