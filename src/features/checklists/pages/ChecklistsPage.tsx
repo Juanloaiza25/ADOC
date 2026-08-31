@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useProfile } from '@/features/users/hooks/useProfile'
 import { useCompany } from '@/features/companies/hooks/useCompany'
 import { checklistService } from '../services/checklistService'
+import { actionService } from '@/features/actions/services/actionService'
 import type { Checklist, ChecklistItemResponse, ChecklistResponseStatus } from '@/shared/types/database'
 import { downloadCsv, openPrintableReport, safeFileName } from '@/lib/export'
 
@@ -176,6 +177,22 @@ export function ChecklistsPage() {
     }
   }
 
+  const createCorrectiveAction = async (itemId: string, title: string) => {
+    const response = responses.get(itemId)
+    if (!response) return
+    setSavingItem(itemId)
+    setMessage(null)
+    try {
+      await actionService.create({ checklistResponseId: response.id, title: `Corregir: ${title}`, description: notesDraft[itemId] ?? response.notes ?? '', priority: 'high' })
+      await queryClient.invalidateQueries({ queryKey: ['actions'] })
+      setMessage('Acción correctiva creada. Puedes gestionarla desde el menú Acciones.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo crear la acción')
+    } finally {
+      setSavingItem(null)
+    }
+  }
+
   if (profileLoading || catalogQuery.isLoading) {
     return <div className="flex justify-center py-24"><div className="h-10 w-10 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" /></div>
   }
@@ -251,6 +268,7 @@ export function ChecklistsPage() {
                     <input type="file" className="sr-only" disabled={savingItem === item.id} accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadEvidence(item.id, file); event.target.value = '' }} />
                   </label>
                   {responses.get(item.id)?.evidence_url && <button type="button" onClick={() => void openEvidence(responses.get(item.id)!.evidence_url!)} className="text-sm text-primary-400 hover:text-primary-300">Ver evidencia</button>}
+                  {responses.get(item.id)?.status === 'non_compliant' && <button type="button" disabled={savingItem === item.id} onClick={() => void createCorrectiveAction(item.id, item.title)} className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300 hover:bg-red-500/20 disabled:opacity-50">Crear acción correctiva</button>}
                   <span className="text-xs text-gray-600">PDF, JPG, PNG o WebP · máximo 10 MB</span>
                 </div>
               </article>

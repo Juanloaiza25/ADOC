@@ -10,11 +10,13 @@ import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { CompanySettingsPage } from '@/features/companies/pages/CompanySettingsPage'
 import { ChecklistsPage } from '@/features/checklists/pages/ChecklistsPage'
 import { FormsPage } from '@/features/forms/pages/FormsPage'
+import { ActionsPage } from '@/features/actions/pages/ActionsPage'
 
 export function AppRouter() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
+        <Route path="/actions" element={<ProtectedRoute><ActionsPage /></ProtectedRoute>} />
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

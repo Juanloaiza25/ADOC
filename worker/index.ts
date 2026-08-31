@@ -150,6 +150,72 @@ app.get('/api/dashboard', requireAuth, async (c) => {
   })
 })
 
+app.get('/api/actions', requireAuth, async (c) => {
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null }>()
+  if (!membership?.company_id) return c.json({ actions: [] })
+  const { results } = await c.env.DB.prepare(`
+    SELECT a.*, assignee.full_name assignee_name, assignee.email assignee_email,
+      ci.title requirement_title, ch.name checklist_name
+    FROM corrective_actions a
+    LEFT JOIN users assignee ON assignee.id=a.assigned_to
+    LEFT JOIN checklist_responses cr ON cr.id=a.checklist_response_id
+    LEFT JOIN checklist_items ci ON ci.id=cr.checklist_item_id
+    LEFT JOIN company_checklists cc ON cc.id=cr.company_checklist_id
+    LEFT JOIN checklists ch ON ch.id=cc.checklist_id
+    WHERE a.company_id=? ORDER BY CASE a.status WHEN 'open' THEN 0 WHEN 'in_progress' THEN 1 ELSE 2 END,
+      CASE a.priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+      COALESCE(a.due_date, '9999-12-31')
+  `).bind(membership.company_id).all()
+  return c.json({ actions: results })
+})
+
+app.post('/api/actions', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(userId).first<{ company_id: string | null }>()
+  if (!membership?.company_id) return c.json({ error: 'Company required' }, 409)
+  const body = await c.req.json<{ checklistResponseId?: string; title?: string; description?: string; assignedTo?: string; dueDate?: string; priority?: string }>()
+  if (!body.title?.trim()) return c.json({ error: 'Title required' }, 400)
+  if (!['low', 'medium', 'high', 'critical'].includes(body.priority ?? 'medium')) return c.json({ error: 'Invalid priority' }, 400)
+  if (body.checklistResponseId) {
+    const response = await c.env.DB.prepare(`SELECT cr.id FROM checklist_responses cr JOIN company_checklists cc ON cc.id=cr.company_checklist_id WHERE cr.id=? AND cc.company_id=?`).bind(body.checklistResponseId, membership.company_id).first()
+    if (!response) return c.json({ error: 'Checklist response not found' }, 404)
+  }
+  if (body.assignedTo) {
+    const assignee = await c.env.DB.prepare('SELECT id FROM users WHERE id=? AND company_id=?').bind(body.assignedTo, membership.company_id).first()
+    if (!assignee) return c.json({ error: 'Assignee not found' }, 404)
+  }
+  const id = crypto.randomUUID()
+  try {
+    await c.env.DB.prepare(`INSERT INTO corrective_actions (id, company_id, checklist_response_id, title, description, assigned_to, due_date, priority, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(id, membership.company_id, body.checklistResponseId || null, body.title.trim(), body.description?.trim() || null, body.assignedTo || null, body.dueDate || null, body.priority || 'medium', userId).run()
+  } catch (error) {
+    if (String(error).includes('UNIQUE')) return c.json({ error: 'Ya existe una acción abierta para este requisito' }, 409)
+    throw error
+  }
+  const action = await c.env.DB.prepare('SELECT * FROM corrective_actions WHERE id=?').bind(id).first()
+  return c.json({ action }, 201)
+})
+
+app.patch('/api/actions/:id', requireAuth, async (c) => {
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null }>()
+  const current = membership?.company_id ? await c.env.DB.prepare('SELECT * FROM corrective_actions WHERE id=? AND company_id=?').bind(c.req.param('id'), membership.company_id).first<Record<string, unknown>>() : null
+  if (!current) return c.json({ error: 'Action not found' }, 404)
+  const body = await c.req.json<{ title?: string; description?: string | null; assignedTo?: string | null; dueDate?: string | null; priority?: string; status?: string }>()
+  const priority = body.priority ?? String(current.priority)
+  const status = body.status ?? String(current.status)
+  if (!['low', 'medium', 'high', 'critical'].includes(priority) || !['open', 'in_progress', 'resolved', 'cancelled'].includes(status)) return c.json({ error: 'Invalid action values' }, 400)
+  const assignedTo = body.assignedTo === undefined ? current.assigned_to : body.assignedTo
+  if (assignedTo) {
+    const assignee = await c.env.DB.prepare('SELECT id FROM users WHERE id=? AND company_id=?').bind(assignedTo, membership!.company_id).first()
+    if (!assignee) return c.json({ error: 'Assignee not found' }, 404)
+  }
+  const completedAt = status === 'resolved' ? (current.completed_at ?? new Date().toISOString()) : null
+  await c.env.DB.prepare(`UPDATE corrective_actions SET title=?, description=?, assigned_to=?, due_date=?, priority=?, status=?, completed_at=?, updated_at=datetime('now') WHERE id=?`)
+    .bind(body.title?.trim() || current.title, body.description === undefined ? current.description : body.description?.trim() || null, assignedTo || null, body.dueDate === undefined ? current.due_date : body.dueDate || null, priority, status, completedAt, c.req.param('id')).run()
+  const action = await c.env.DB.prepare('SELECT * FROM corrective_actions WHERE id=?').bind(c.req.param('id')).first()
+  return c.json({ action })
+})
+
 app.get('/api/checklists', requireAuth, async (c) => {
   const { results: checklists } = await c.env.DB.prepare(`
     SELECT c.id, c.name, c.description, r.code regulation_code, r.name regulation_name

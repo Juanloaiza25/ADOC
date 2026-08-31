@@ -98,3 +98,25 @@ export interface FormSubmission {
   status: 'draft' | 'submitted' | 'approved' | 'rejected'
   updated_at: string
 }
+
+export type ActionPriority = 'low' | 'medium' | 'high' | 'critical'
+export type ActionStatus = 'open' | 'in_progress' | 'resolved' | 'cancelled'
+
+export interface CorrectiveAction {
+  id: string
+  company_id: string
+  checklist_response_id: string | null
+  title: string
+  description: string | null
+  assigned_to: string | null
+  assignee_name?: string | null
+  assignee_email?: string | null
+  requirement_title?: string | null
+  checklist_name?: string | null
+  due_date: string | null
+  priority: ActionPriority
+  status: ActionStatus
+  created_at: string
+  updated_at: string
+  completed_at: string | null
+}

@@ -86,6 +86,9 @@ export function MainLayout() {
       <Link to="/dashboard" className={navLinkClass}>
         Dashboard
       </Link>
+      <Link to="/actions" className={navLinkClass}>
+        Acciones correctivas
+      </Link>
       <Link to="/settings/company" className={navLinkClass}>
         Mi empresa
       </Link>
@@ -145,6 +148,7 @@ export function MainLayout() {
                   <Link to="/dashboard" className={navLinkClass}>Panel</Link>
                   <Link to="/checklists" className={navLinkClass}>Checklists</Link>
                   <Link to="/forms" className={navLinkClass}>Formularios</Link>
+                  <Link to="/actions" className={navLinkClass}>Acciones</Link>
                   <div className="relative">
                     <button
                       type="button"

@@ -52,7 +52,7 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {summary.nonCompliant > 0 && <section className="flex flex-col justify-between gap-4 rounded-2xl border border-red-500/25 bg-red-500/5 p-5 sm:flex-row sm:items-center"><div><h2 className="font-semibold text-red-300">Tienes {summary.nonCompliant} requisito{summary.nonCompliant === 1 ? '' : 's'} sin cumplir</h2><p className="mt-1 text-sm text-gray-400">Revísalos y crea acciones correctivas para cerrar las brechas.</p></div><Link to="/checklists" className="shrink-0 rounded-lg bg-red-500/15 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-500/25">Revisar hallazgos</Link></section>}
+      {summary.nonCompliant > 0 && <section className="flex flex-col justify-between gap-4 rounded-2xl border border-red-500/25 bg-red-500/5 p-5 sm:flex-row sm:items-center"><div><h2 className="font-semibold text-red-300">Tienes {summary.nonCompliant} requisito{summary.nonCompliant === 1 ? '' : 's'} sin cumplir</h2><p className="mt-1 text-sm text-gray-400">Revísalos y crea acciones correctivas para cerrar las brechas.</p></div><Link to="/actions" className="shrink-0 rounded-lg bg-red-500/15 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-500/25">Gestionar acciones</Link></section>}
     </div>
   )
 }
