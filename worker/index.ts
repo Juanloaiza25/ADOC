@@ -246,6 +246,8 @@ app.get('/api/dashboard', requireAuth, async (c) => {
     LEFT JOIN users u ON u.id=cr.responded_by
     WHERE cc.company_id=? ORDER BY cr.updated_at DESC LIMIT 6
   `).bind(companyId).all()
+  const actionStats = await c.env.DB.prepare(`SELECT COUNT(*) active, SUM(CASE WHEN due_date < date('now') THEN 1 ELSE 0 END) overdue FROM corrective_actions WHERE company_id=? AND status IN ('open','in_progress')`).bind(companyId).first<{ active: number; overdue: number }>()
+  const deadlineStats = await c.env.DB.prepare(`SELECT COUNT(*) upcoming, SUM(CASE WHEN due_date < date('now') THEN 1 ELSE 0 END) overdue FROM compliance_deadlines WHERE company_id=? AND status='pending'`).bind(companyId).first<{ upcoming: number; overdue: number }>()
   const total = Number(totals?.total ?? 0)
   const evaluated = Number(totals?.compliant ?? 0) + Number(totals?.non_compliant ?? 0) + Number(totals?.not_applicable ?? 0)
   return c.json({
@@ -256,6 +258,9 @@ app.get('/api/dashboard', requireAuth, async (c) => {
       notApplicable: Number(totals?.not_applicable ?? 0),
       pending: Number(totals?.pending ?? 0),
       progress: total ? Math.round(evaluated * 100 / total) : 0,
+      activeActions: Number(actionStats?.active ?? 0),
+      overdue: Number(actionStats?.overdue ?? 0) + Number(deadlineStats?.overdue ?? 0),
+      upcomingDeadlines: Number(deadlineStats?.upcoming ?? 0),
     },
     checklists: checklists.map((item) => ({ ...item, total: Number(item.total), compliant: Number(item.compliant), non_compliant: Number(item.non_compliant), not_applicable: Number(item.not_applicable), pending: Number(item.pending) })),
     recent,

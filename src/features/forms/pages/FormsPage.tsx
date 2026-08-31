@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useProfile } from '@/features/users/hooks/useProfile'
@@ -15,6 +15,7 @@ export function FormsPage() {
   const [values, setValues] = useState<Record<string, string | number>>({})
   const [message, setMessage] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const lastSaved = useRef('')
 
   const formsQuery = useQuery({ queryKey: ['regulatory-forms'], queryFn: formService.list })
   useEffect(() => { if (!selected && formsQuery.data?.length) setSelected(formsQuery.data[0]) }, [formsQuery.data, selected])
@@ -25,7 +26,28 @@ export function FormsPage() {
     enabled: Boolean(profile?.company_id && selected?.id),
   })
 
-  useEffect(() => { setValues(submissionQuery.data?.data ?? {}) }, [submissionQuery.data, selected?.id])
+  useEffect(() => {
+    const next = submissionQuery.data?.data ?? {}
+    setValues(next)
+    lastSaved.current = JSON.stringify(next)
+  }, [submissionQuery.data, selected?.id])
+
+  useEffect(() => {
+    const companyId = profile?.company_id
+    const signature = JSON.stringify(values)
+    if (!companyId || !selected || !submissionQuery.isFetched || signature === lastSaved.current) return
+    const timeout = window.setTimeout(async () => {
+      try {
+        await formService.saveDraft(companyId, selected.id, values)
+        lastSaved.current = signature
+        setMessage('Guardado automáticamente')
+        void queryClient.invalidateQueries({ queryKey: ['form-submission', companyId, selected.id] })
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : 'No se pudo guardar automáticamente')
+      }
+    }, 900)
+    return () => window.clearTimeout(timeout)
+  }, [profile?.company_id, queryClient, selected, submissionQuery.isFetched, values])
 
   const persist = async (submit: boolean) => {
     const companyId = profile?.company_id
@@ -37,6 +59,7 @@ export function FormsPage() {
     try {
       if (submit) await formService.submit(companyId, selected.id, values)
       else await formService.saveDraft(companyId, selected.id, values)
+      lastSaved.current = JSON.stringify(values)
       await queryClient.invalidateQueries({ queryKey: ['form-submission', companyId, selected.id] })
       setMessage(submit ? 'Formulario enviado correctamente' : 'Borrador guardado')
     } catch (error) {

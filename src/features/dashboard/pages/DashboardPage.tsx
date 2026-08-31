@@ -22,7 +22,7 @@ export function DashboardPage() {
     { label: 'Avance global', value: `${summary.progress}%`, color: 'text-primary-400' },
     { label: 'Cumplen', value: summary.compliant, color: 'text-emerald-400' },
     { label: 'No conformes', value: summary.nonCompliant, color: 'text-red-400' },
-    { label: 'Pendientes', value: summary.pending, color: 'text-amber-400' },
+    { label: 'Acciones activas', value: summary.activeActions, color: 'text-amber-400' },
   ]
 
   return (
@@ -53,6 +53,7 @@ export function DashboardPage() {
       </section>
 
       {summary.nonCompliant > 0 && <section className="flex flex-col justify-between gap-4 rounded-2xl border border-red-500/25 bg-red-500/5 p-5 sm:flex-row sm:items-center"><div><h2 className="font-semibold text-red-300">Tienes {summary.nonCompliant} requisito{summary.nonCompliant === 1 ? '' : 's'} sin cumplir</h2><p className="mt-1 text-sm text-gray-400">Revísalos y crea acciones correctivas para cerrar las brechas.</p></div><Link to="/actions" className="shrink-0 rounded-lg bg-red-500/15 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-500/25">Gestionar acciones</Link></section>}
+      {(summary.upcomingDeadlines > 0 || summary.overdue > 0) && <section className={`flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center ${summary.overdue ? 'border-red-500/25 bg-red-500/5' : 'border-amber-500/25 bg-amber-500/5'}`}><div><h2 className={`font-semibold ${summary.overdue ? 'text-red-300' : 'text-amber-300'}`}>{summary.overdue ? `${summary.overdue} vencimiento${summary.overdue === 1 ? '' : 's'} atrasado${summary.overdue === 1 ? '' : 's'}` : `${summary.upcomingDeadlines} vencimiento${summary.upcomingDeadlines === 1 ? '' : 's'} programado${summary.upcomingDeadlines === 1 ? '' : 's'}`}</h2><p className="mt-1 text-sm text-gray-400">Revisa las próximas fechas para mantener el cumplimiento al día.</p></div><Link to="/deadlines" className="shrink-0 rounded-lg border border-gray-700 px-4 py-2 text-sm text-gray-300">Ver calendario</Link></section>}
     </div>
   )
 }

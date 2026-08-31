@@ -61,6 +61,14 @@ export function MainLayout() {
   }
 
   const navLinkClass = 'text-gray-400 hover:text-primary-400 font-medium transition-colors'
+  const appNavigation = [
+    { label: 'Resumen', href: '/dashboard', icon: '⌂' },
+    { label: 'Checklists', href: '/checklists', icon: '✓' },
+    { label: 'Formularios', href: '/forms', icon: '▤' },
+    { label: 'Acciones', href: '/actions', icon: '!' },
+    { label: 'Vencimientos', href: '/deadlines', icon: '◷' },
+    { label: 'Reportes', href: '/reports', icon: '↧' },
+  ]
 
   const navItems = isHome ? (
     <>
@@ -157,11 +165,6 @@ export function MainLayout() {
               {!isAuthenticated && navItems}
               {isAuthenticated ? (
                 <>
-                  <Link to="/dashboard" className={navLinkClass}>Panel</Link>
-                  <Link to="/checklists" className={navLinkClass}>Checklists</Link>
-                  <Link to="/forms" className={navLinkClass}>Formularios</Link>
-                  <Link to="/actions" className={navLinkClass}>Acciones</Link>
-                  <Link to="/reports" className={navLinkClass}>Reportes</Link>
                   <div className="relative">
                     <button
                       type="button"
@@ -223,9 +226,19 @@ export function MainLayout() {
         </div>
       </nav>
 
-      <main className={`flex-1 ${!isHome ? 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full' : ''}`}>
-        <Outlet />
-      </main>
+      {isAuthenticated && !isHome ? (
+        <div className="mx-auto flex w-full max-w-7xl flex-1">
+          <aside className="hidden w-56 shrink-0 border-r border-gray-800 px-4 py-8 lg:block">
+            <nav className="sticky top-24 space-y-1">
+              {appNavigation.map((item) => <Link key={item.href} to={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${location.pathname === item.href ? 'bg-primary-500/15 text-primary-400' : 'text-gray-500 hover:bg-dark-900 hover:text-gray-200'}`}><span className="flex h-6 w-6 items-center justify-center rounded-md bg-dark-800 text-xs">{item.icon}</span>{item.label}</Link>)}
+              <div className="my-3 border-t border-gray-800" />
+              <Link to="/team" className={`block rounded-xl px-3 py-2 text-sm ${location.pathname === '/team' ? 'text-primary-400' : 'text-gray-500 hover:text-gray-200'}`}>Equipo</Link>
+              <Link to="/audit" className={`block rounded-xl px-3 py-2 text-sm ${location.pathname === '/audit' ? 'text-primary-400' : 'text-gray-500 hover:text-gray-200'}`}>Historial</Link>
+            </nav>
+          </aside>
+          <main className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-8"><Outlet /></main>
+        </div>
+      ) : <main className={`flex-1 ${!isHome ? 'mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8' : ''}`}><Outlet /></main>}
 
       {/* Footer */}
       {isHome && (

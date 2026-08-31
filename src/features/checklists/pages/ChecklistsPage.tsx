@@ -24,6 +24,8 @@ export function ChecklistsPage() {
   const [savingItem, setSavingItem] = useState<string | null>(null)
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<ChecklistResponseStatus | 'all'>('all')
 
   const catalogQuery = useQuery({
     queryKey: ['checklist-catalog'],
@@ -60,6 +62,18 @@ export function ChecklistsPage() {
     return status && status !== 'pending'
   }).length ?? 0
   const progress = selected?.items.length ? Math.round((answered / selected.items.length) * 100) : 0
+  const filteredItems = (selected?.items ?? []).filter((item) => {
+    const matchesText = `${item.title} ${item.description ?? ''}`.toLowerCase().includes(search.toLowerCase())
+    const matchesStatus = statusFilter === 'all' || (responses.get(item.id)?.status ?? 'pending') === statusFilter
+    return matchesText && matchesStatus
+  })
+  const hasUnsavedNotes = Object.entries(notesDraft).some(([itemId, note]) => note !== (responses.get(itemId)?.notes ?? ''))
+
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (hasUnsavedNotes) event.preventDefault() }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [hasUnsavedNotes])
 
   const exportRows = () => (selected?.items ?? []).map((item) => {
     const response = responses.get(item.id)
@@ -242,8 +256,15 @@ export function ChecklistsPage() {
             {message && <p aria-live="polite" className="mt-2 text-sm text-gray-400">{message}</p>}
           </div>
 
+          <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_180px]">
+            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar requisito..." className="rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-primary-500 focus:outline-none" />
+            <select aria-label="Filtrar por estado" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as ChecklistResponseStatus | 'all')} className="rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-sm text-white"><option value="all">Todos los estados</option>{STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+          </div>
+
           <div className="space-y-3">
-            {selected.items.map((item, index) => (
+            {filteredItems.map((item) => {
+              const index = selected.items.findIndex((candidate) => candidate.id === item.id)
+              return (
               <article key={item.id} className="rounded-xl border border-gray-800 bg-dark-950/50 p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div><h3 className="font-medium text-white"><span className="mr-2 text-gray-600">{index + 1}.</span>{item.title}</h3>{item.description && <p className="mt-1 text-sm text-gray-400">{item.description}</p>}</div>
@@ -272,7 +293,8 @@ export function ChecklistsPage() {
                   <span className="text-xs text-gray-600">PDF, JPG, PNG o WebP · máximo 10 MB</span>
                 </div>
               </article>
-            ))}
+            )})}
+            {!filteredItems.length && <div className="rounded-xl border border-dashed border-gray-800 py-10 text-center text-sm text-gray-500">No hay requisitos que coincidan con los filtros.</div>}
           </div>
         </section>
       </div>
