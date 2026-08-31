@@ -3,12 +3,15 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { actionService } from '../services/actionService'
 import type { ActionPriority, ActionStatus } from '@/shared/types/database'
+import { useProfile } from '@/features/users/hooks/useProfile'
 
 const STATUS: Record<ActionStatus, string> = { open: 'Abierta', in_progress: 'En progreso', resolved: 'Resuelta', cancelled: 'Cancelada' }
 const PRIORITY: Record<ActionPriority, string> = { low: 'Baja', medium: 'Media', high: 'Alta', critical: 'Crítica' }
 const PRIORITY_CLASS: Record<ActionPriority, string> = { low: 'text-gray-400', medium: 'text-amber-300', high: 'text-orange-300', critical: 'text-red-300' }
 
 export function ActionsPage() {
+  const { profile } = useProfile()
+  const readOnly = profile?.role === 'auditor'
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<'active' | 'resolved' | 'all'>('active')
   const [creating, setCreating] = useState(false)
@@ -22,7 +25,7 @@ export function ActionsPage() {
 
   if (actions.isLoading) return <div className="flex justify-center py-24"><div className="h-10 w-10 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" /></div>
   return <div className="space-y-6">
-    <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><Link to="/dashboard" className="text-sm text-primary-400">← Dashboard</Link><h1 className="mt-3 text-2xl font-bold text-white">Acciones correctivas</h1><p className="mt-1 text-gray-400">Convierte hallazgos en tareas verificables.</p></div><button type="button" onClick={() => setCreating((value) => !value)} className="rounded-lg bg-primary-500 px-4 py-2 font-semibold text-dark-950 hover:bg-primary-400">{creating ? 'Cancelar' : 'Nueva acción'}</button></header>
+    <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><Link to="/dashboard" className="text-sm text-primary-400">← Dashboard</Link><h1 className="mt-3 text-2xl font-bold text-white">Acciones correctivas</h1><p className="mt-1 text-gray-400">Convierte hallazgos en tareas verificables.</p></div>{!readOnly && <button type="button" onClick={() => setCreating((value) => !value)} className="rounded-lg bg-primary-500 px-4 py-2 font-semibold text-dark-950 hover:bg-primary-400">{creating ? 'Cancelar' : 'Nueva acción'}</button>}</header>
     {creating && <form onSubmit={(event) => { event.preventDefault(); setMessage(null); create.mutate({ ...form, dueDate: form.dueDate || undefined }) }} className="grid gap-4 rounded-2xl border border-primary-500/30 bg-dark-900/60 p-5 md:grid-cols-2"><label className="text-sm text-gray-300">Título<input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-white" /></label><label className="text-sm text-gray-300">Fecha límite<input type="date" value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-white" /></label><label className="text-sm text-gray-300 md:col-span-2">Descripción<textarea rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-white" /></label><label className="text-sm text-gray-300">Prioridad<select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as ActionPriority })} className="mt-1 w-full rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-white"><option value="low">Baja</option><option value="medium">Media</option><option value="high">Alta</option><option value="critical">Crítica</option></select></label><button disabled={create.isPending} className="self-end rounded-lg bg-primary-500 px-4 py-2 font-semibold text-dark-950 disabled:opacity-50">{create.isPending ? 'Creando...' : 'Crear acción'}</button></form>}
     {(message || create.error) && <p className={`text-sm ${create.error ? 'text-red-400' : 'text-primary-400'}`}>{create.error?.message || message}</p>}
     <div className="flex gap-2">{(['active', 'resolved', 'all'] as const).map((value) => <button key={value} onClick={() => setFilter(value)} className={`rounded-lg px-3 py-2 text-sm ${filter === value ? 'bg-primary-500/15 text-primary-400' : 'text-gray-500 hover:text-gray-300'}`}>{value === 'active' ? 'Activas' : value === 'resolved' ? 'Resueltas' : 'Todas'}</button>)}</div>

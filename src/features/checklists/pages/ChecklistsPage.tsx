@@ -19,6 +19,7 @@ export function ChecklistsPage() {
   const { profile, isLoading: profileLoading } = useProfile()
   const { company } = useCompany(profile?.company_id)
   const queryClient = useQueryClient()
+  const readOnly = profile?.role === 'auditor'
   const [selected, setSelected] = useState<Checklist | null>(null)
   const [companyChecklistId, setCompanyChecklistId] = useState<string | null>(null)
   const [savingItem, setSavingItem] = useState<string | null>(null)
@@ -268,7 +269,7 @@ export function ChecklistsPage() {
               <article key={item.id} className="rounded-xl border border-gray-800 bg-dark-950/50 p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div><h3 className="font-medium text-white"><span className="mr-2 text-gray-600">{index + 1}.</span>{item.title}</h3>{item.description && <p className="mt-1 text-sm text-gray-400">{item.description}</p>}</div>
-                  <select aria-label={`Estado de ${item.title}`} value={responses.get(item.id)?.status ?? 'pending'} disabled={savingItem === item.id || instanceQuery.isLoading} onChange={(event) => saveStatus(item.id, event.target.value as ChecklistResponseStatus)} className="min-w-36 rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-none">
+                  <select aria-label={`Estado de ${item.title}`} value={responses.get(item.id)?.status ?? 'pending'} disabled={readOnly || savingItem === item.id || instanceQuery.isLoading} onChange={(event) => saveStatus(item.id, event.target.value as ChecklistResponseStatus)} className="min-w-36 rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-none disabled:opacity-60">
                     {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 </div>
@@ -276,20 +277,21 @@ export function ChecklistsPage() {
                   <textarea
                     aria-label={`Notas de ${item.title}`}
                     rows={2}
+                    disabled={readOnly}
                     value={notesDraft[item.id] ?? responses.get(item.id)?.notes ?? ''}
                     onChange={(event) => setNotesDraft((current) => ({ ...current, [item.id]: event.target.value }))}
                     placeholder="Observaciones, hallazgos o acciones pendientes..."
                     className="resize-y rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-primary-500 focus:outline-none"
                   />
-                  <button type="button" disabled={savingItem === item.id} onClick={() => saveNotes(item.id)} className="self-end rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-300 hover:border-primary-500 hover:text-primary-400 disabled:opacity-50">Guardar nota</button>
+                  {!readOnly && <button type="button" disabled={savingItem === item.id} onClick={() => saveNotes(item.id)} className="self-end rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-300 hover:border-primary-500 hover:text-primary-400 disabled:opacity-50">Guardar nota</button>}
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <label className="cursor-pointer rounded-lg bg-dark-800 px-3 py-2 text-sm text-gray-300 hover:text-primary-400">
+                  {!readOnly && <label className="cursor-pointer rounded-lg bg-dark-800 px-3 py-2 text-sm text-gray-300 hover:text-primary-400">
                     {savingItem === item.id ? 'Cargando...' : 'Adjuntar evidencia'}
                     <input type="file" className="sr-only" disabled={savingItem === item.id} accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadEvidence(item.id, file); event.target.value = '' }} />
-                  </label>
+                  </label>}
                   {responses.get(item.id)?.evidence_url && <button type="button" onClick={() => void openEvidence(responses.get(item.id)!.evidence_url!)} className="text-sm text-primary-400 hover:text-primary-300">Ver evidencia</button>}
-                  {responses.get(item.id)?.status === 'non_compliant' && <button type="button" disabled={savingItem === item.id} onClick={() => void createCorrectiveAction(item.id, item.title)} className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300 hover:bg-red-500/20 disabled:opacity-50">Crear acción correctiva</button>}
+                  {!readOnly && responses.get(item.id)?.status === 'non_compliant' && <button type="button" disabled={savingItem === item.id} onClick={() => void createCorrectiveAction(item.id, item.title)} className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300 hover:bg-red-500/20 disabled:opacity-50">Crear acción correctiva</button>}
                   <span className="text-xs text-gray-600">PDF, JPG, PNG o WebP · máximo 10 MB</span>
                 </div>
               </article>

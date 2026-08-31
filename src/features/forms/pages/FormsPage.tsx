@@ -9,6 +9,7 @@ import { downloadCsv, openPrintableReport, safeFileName } from '@/lib/export'
 
 export function FormsPage() {
   const { profile, isLoading: profileLoading } = useProfile()
+  const readOnly = profile?.role === 'auditor'
   const { company } = useCompany(profile?.company_id)
   const queryClient = useQueryClient()
   const [selected, setSelected] = useState<RegulatoryForm | null>(null)
@@ -35,7 +36,7 @@ export function FormsPage() {
   useEffect(() => {
     const companyId = profile?.company_id
     const signature = JSON.stringify(values)
-    if (!companyId || !selected || !submissionQuery.isFetched || signature === lastSaved.current) return
+    if (readOnly || !companyId || !selected || !submissionQuery.isFetched || signature === lastSaved.current) return
     const timeout = window.setTimeout(async () => {
       try {
         await formService.saveDraft(companyId, selected.id, values)
@@ -47,7 +48,7 @@ export function FormsPage() {
       }
     }, 900)
     return () => window.clearTimeout(timeout)
-  }, [profile?.company_id, queryClient, selected, submissionQuery.isFetched, values])
+  }, [profile?.company_id, queryClient, readOnly, selected, submissionQuery.isFetched, values])
 
   const persist = async (submit: boolean) => {
     const companyId = profile?.company_id
@@ -95,7 +96,7 @@ export function FormsPage() {
   }
 
   const renderField = (field: FormField) => {
-    const common = { id: field.name, required: field.required, value: values[field.name] ?? '', onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setValues((current) => ({ ...current, [field.name]: event.target.value })), className: 'w-full rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-white placeholder-gray-600 focus:border-primary-500 focus:outline-none' }
+    const common = { id: field.name, required: field.required, disabled: readOnly, value: values[field.name] ?? '', onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setValues((current) => ({ ...current, [field.name]: event.target.value })), className: 'w-full rounded-lg border border-gray-700 bg-dark-800 px-3 py-2 text-white placeholder-gray-600 focus:border-primary-500 focus:outline-none disabled:opacity-60' }
     if (field.type === 'textarea') return <textarea {...common} rows={4} placeholder={field.placeholder} />
     if (field.type === 'select') return <select {...common}><option value="">Seleccionar</option>{field.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select>
     return <input {...common} type={field.type} placeholder={field.placeholder} />
@@ -122,7 +123,7 @@ export function FormsPage() {
           <form onSubmit={(event) => { event.preventDefault(); void persist(true) }} className="space-y-5">
             {selected.schema.fields.map((field) => <div key={field.name}><label htmlFor={field.name} className="mb-1 block text-sm font-medium text-gray-300">{field.label}{field.required && ' *'}</label>{renderField(field)}</div>)}
             {message && <p aria-live="polite" className="text-sm text-gray-400">{message}</p>}
-            <div className="flex flex-wrap gap-3"><button type="button" disabled={isSaving} onClick={() => void persist(false)} className="rounded-lg border border-gray-700 px-4 py-2 text-gray-300 hover:border-primary-500 disabled:opacity-50">Guardar borrador</button><button type="submit" disabled={isSaving} className="rounded-lg bg-primary-500 px-4 py-2 font-semibold text-dark-950 hover:bg-primary-400 disabled:opacity-50">Enviar formulario</button></div>
+            {!readOnly && <div className="flex flex-wrap gap-3"><button type="button" disabled={isSaving} onClick={() => void persist(false)} className="rounded-lg border border-gray-700 px-4 py-2 text-gray-300 hover:border-primary-500 disabled:opacity-50">Guardar borrador</button><button type="submit" disabled={isSaving} className="rounded-lg bg-primary-500 px-4 py-2 font-semibold text-dark-950 hover:bg-primary-400 disabled:opacity-50">Enviar formulario</button></div>}
           </form>
         </section>
       </div>

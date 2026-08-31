@@ -15,6 +15,11 @@ async function isPlatformAdmin(env: Env, userId: string) {
   return user?.is_platform_admin === 1
 }
 
+async function canEditCompliance(env: Env, userId: string) {
+  const user = await env.DB.prepare('SELECT COALESCE(access_role, role) role FROM users WHERE id=?').bind(userId).first<{ role: string }>()
+  return user?.role !== 'auditor'
+}
+
 app.use('/api/*', async (c, next) => cors({
   origin: (origin) => c.env.APP_ORIGIN.split(',').includes(origin) ? origin : '',
   credentials: true,
@@ -128,6 +133,7 @@ app.get('/api/deadlines', requireAuth, async (c) => {
 })
 
 app.post('/api/deadlines', requireAuth, async (c) => {
+  if (!(await canEditCompliance(c.env, c.get('userId')))) return c.json({ error: 'Los auditores tienen acceso de solo lectura' }, 403)
   const userId = c.get('userId')
   const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(userId).first<{ company_id: string | null }>()
   if (!membership?.company_id) return c.json({ error: 'Company required' }, 409)
@@ -142,6 +148,7 @@ app.post('/api/deadlines', requireAuth, async (c) => {
 })
 
 app.patch('/api/deadlines/:id', requireAuth, async (c) => {
+  if (!(await canEditCompliance(c.env, c.get('userId')))) return c.json({ error: 'Los auditores tienen acceso de solo lectura' }, 403)
   const userId = c.get('userId')
   const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(userId).first<{ company_id: string | null }>()
   const current = membership?.company_id ? await c.env.DB.prepare('SELECT * FROM compliance_deadlines WHERE id=? AND company_id=?').bind(c.req.param('id'), membership.company_id).first<Record<string, unknown>>() : null
@@ -293,6 +300,7 @@ app.get('/api/actions', requireAuth, async (c) => {
 })
 
 app.post('/api/actions', requireAuth, async (c) => {
+  if (!(await canEditCompliance(c.env, c.get('userId')))) return c.json({ error: 'Los auditores tienen acceso de solo lectura' }, 403)
   const userId = c.get('userId')
   const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(userId).first<{ company_id: string | null }>()
   if (!membership?.company_id) return c.json({ error: 'Company required' }, 409)
@@ -321,6 +329,7 @@ app.post('/api/actions', requireAuth, async (c) => {
 })
 
 app.patch('/api/actions/:id', requireAuth, async (c) => {
+  if (!(await canEditCompliance(c.env, c.get('userId')))) return c.json({ error: 'Los auditores tienen acceso de solo lectura' }, 403)
   const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null }>()
   const current = membership?.company_id ? await c.env.DB.prepare('SELECT * FROM corrective_actions WHERE id=? AND company_id=?').bind(c.req.param('id'), membership.company_id).first<Record<string, unknown>>() : null
   if (!current) return c.json({ error: 'Action not found' }, 404)
@@ -390,6 +399,7 @@ app.get('/api/company-checklists/:id/responses', requireAuth, async (c) => {
 })
 
 app.put('/api/company-checklists/:id/responses/:itemId', requireAuth, async (c) => {
+  if (!(await canEditCompliance(c.env, c.get('userId')))) return c.json({ error: 'Los auditores tienen acceso de solo lectura' }, 403)
   const companyChecklistId = c.req.param('id')
   const itemId = c.req.param('itemId')
   const allowed = await c.env.DB.prepare(`SELECT cc.id, cc.company_id FROM company_checklists cc JOIN users u ON u.company_id=cc.company_id WHERE cc.id=? AND u.id=?`).bind(companyChecklistId, c.get('userId')).first<{ id: string; company_id: string }>()
@@ -409,6 +419,7 @@ app.put('/api/company-checklists/:id/responses/:itemId', requireAuth, async (c) 
 })
 
 app.post('/api/company-checklists/:id/responses/:itemId/evidence', requireAuth, async (c) => {
+  if (!(await canEditCompliance(c.env, c.get('userId')))) return c.json({ error: 'Los auditores tienen acceso de solo lectura' }, 403)
   const companyChecklistId = c.req.param('id')
   const itemId = c.req.param('itemId')
   const membership = await c.env.DB.prepare(`SELECT cc.company_id FROM company_checklists cc JOIN users u ON u.company_id=cc.company_id WHERE cc.id=? AND u.id=?`).bind(companyChecklistId, c.get('userId')).first<{ company_id: string }>()
@@ -453,6 +464,7 @@ app.get('/api/forms/:formId/submission', requireAuth, async (c) => {
 })
 
 app.put('/api/forms/:formId/submission', requireAuth, async (c) => {
+  if (!(await canEditCompliance(c.env, c.get('userId')))) return c.json({ error: 'Los auditores tienen acceso de solo lectura' }, 403)
   const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null }>()
   if (!membership?.company_id) return c.json({ error: 'Company required' }, 409)
   const body = await c.req.json<{ data?: Record<string, string | number>; status?: 'draft' | 'submitted' }>()
