@@ -99,6 +99,57 @@ app.patch('/api/company', requireAuth, async (c) => {
   return c.json({ company })
 })
 
+app.get('/api/dashboard', requireAuth, async (c) => {
+  const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null }>()
+  if (!membership?.company_id) return c.json({ error: 'Company required' }, 409)
+  const companyId = membership.company_id
+  const totals = await c.env.DB.prepare(`
+    SELECT COUNT(ci.id) total,
+      SUM(CASE WHEN cr.status='compliant' THEN 1 ELSE 0 END) compliant,
+      SUM(CASE WHEN cr.status='non_compliant' THEN 1 ELSE 0 END) non_compliant,
+      SUM(CASE WHEN cr.status='not_applicable' THEN 1 ELSE 0 END) not_applicable,
+      SUM(CASE WHEN cr.status IS NULL OR cr.status='pending' THEN 1 ELSE 0 END) pending
+    FROM checklist_items ci
+    JOIN checklists c ON c.id=ci.checklist_id AND c.active=1
+    LEFT JOIN company_checklists cc ON cc.checklist_id=c.id AND cc.company_id=?
+    LEFT JOIN checklist_responses cr ON cr.company_checklist_id=cc.id AND cr.checklist_item_id=ci.id
+  `).bind(companyId).first<Record<string, number>>()
+  const { results: checklists } = await c.env.DB.prepare(`
+    SELECT c.id, c.name, r.code regulation_code, COUNT(ci.id) total,
+      SUM(CASE WHEN cr.status='compliant' THEN 1 ELSE 0 END) compliant,
+      SUM(CASE WHEN cr.status='non_compliant' THEN 1 ELSE 0 END) non_compliant,
+      SUM(CASE WHEN cr.status='not_applicable' THEN 1 ELSE 0 END) not_applicable,
+      SUM(CASE WHEN cr.status IS NULL OR cr.status='pending' THEN 1 ELSE 0 END) pending
+    FROM checklists c JOIN regulations r ON r.id=c.regulation_id
+    JOIN checklist_items ci ON ci.checklist_id=c.id
+    LEFT JOIN company_checklists cc ON cc.checklist_id=c.id AND cc.company_id=?
+    LEFT JOIN checklist_responses cr ON cr.company_checklist_id=cc.id AND cr.checklist_item_id=ci.id
+    WHERE c.active=1 GROUP BY c.id, c.name, r.code ORDER BY c.name
+  `).bind(companyId).all<Record<string, unknown>>()
+  const { results: recent } = await c.env.DB.prepare(`
+    SELECT cr.updated_at, ci.title, cr.status, u.full_name actor
+    FROM checklist_responses cr
+    JOIN company_checklists cc ON cc.id=cr.company_checklist_id
+    JOIN checklist_items ci ON ci.id=cr.checklist_item_id
+    LEFT JOIN users u ON u.id=cr.responded_by
+    WHERE cc.company_id=? ORDER BY cr.updated_at DESC LIMIT 6
+  `).bind(companyId).all()
+  const total = Number(totals?.total ?? 0)
+  const evaluated = Number(totals?.compliant ?? 0) + Number(totals?.non_compliant ?? 0) + Number(totals?.not_applicable ?? 0)
+  return c.json({
+    summary: {
+      total,
+      compliant: Number(totals?.compliant ?? 0),
+      nonCompliant: Number(totals?.non_compliant ?? 0),
+      notApplicable: Number(totals?.not_applicable ?? 0),
+      pending: Number(totals?.pending ?? 0),
+      progress: total ? Math.round(evaluated * 100 / total) : 0,
+    },
+    checklists: checklists.map((item) => ({ ...item, total: Number(item.total), compliant: Number(item.compliant), non_compliant: Number(item.non_compliant), not_applicable: Number(item.not_applicable), pending: Number(item.pending) })),
+    recent,
+  })
+})
+
 app.get('/api/checklists', requireAuth, async (c) => {
   const { results: checklists } = await c.env.DB.prepare(`
     SELECT c.id, c.name, c.description, r.code regulation_code, r.name regulation_name
