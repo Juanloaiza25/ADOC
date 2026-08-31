@@ -224,6 +224,26 @@ app.patch('/api/team/members/:id', requireAuth, async (c) => {
   return c.json({ ok: true })
 })
 
+app.delete('/api/team/members/:id', requireAuth, async (c) => {
+  const actorId = c.get('userId')
+  const actor = await c.env.DB.prepare('SELECT company_id, COALESCE(access_role, role) role FROM users WHERE id=?').bind(actorId).first<{ company_id: string | null; role: string }>()
+  if (!actor?.company_id || !['owner', 'admin'].includes(actor.role)) return c.json({ error: 'Owner or admin role required' }, 403)
+  if (actorId === c.req.param('id')) return c.json({ error: 'No puedes eliminarte a ti mismo desde esta opción' }, 409)
+  const target = await c.env.DB.prepare('SELECT id, email, full_name, COALESCE(access_role, role) role FROM users WHERE id=? AND company_id=?').bind(c.req.param('id'), actor.company_id).first<{ id: string; email: string; full_name: string | null; role: string }>()
+  if (!target) return c.json({ error: 'Member not found' }, 404)
+  if (target.role === 'owner' && actor.role !== 'owner') return c.json({ error: 'Solo otro propietario puede eliminar a un propietario' }, 403)
+  if (target.role === 'owner') {
+    const owners = await c.env.DB.prepare("SELECT COUNT(*) count FROM users WHERE company_id=? AND COALESCE(access_role, role)='owner'").bind(actor.company_id).first<{ count: number }>()
+    if (Number(owners?.count) <= 1) return c.json({ error: 'La empresa debe conservar al menos un propietario' }, 409)
+  }
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE users SET company_id=NULL, access_role='collaborator', role='member', updated_at=datetime('now') WHERE id=?").bind(target.id),
+    c.env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(target.id),
+  ])
+  await addAudit(c.env, actor.company_id, actorId, 'team_member', target.id, 'removed', { email: target.email, name: target.full_name, role: target.role }, { membership: 'removed' })
+  return c.body(null, 204)
+})
+
 app.get('/api/dashboard', requireAuth, async (c) => {
   const membership = await c.env.DB.prepare('SELECT company_id FROM users WHERE id=?').bind(c.get('userId')).first<{ company_id: string | null }>()
   if (!membership?.company_id) return c.json({ error: 'Company required' }, 409)

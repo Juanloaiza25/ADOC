@@ -8,5 +8,6 @@ export const teamService = {
   get: () => apiRequest<{ members: TeamMember[]; invitations: TeamInvitation[]; canManage: boolean }>('/api/team'),
   invite: (email: string, role: TeamInvitation['role']) => apiRequest<{ invitation: TeamInvitation }>('/api/team/invitations', { method: 'POST', body: JSON.stringify({ email, role }) }),
   updateRole: (id: string, role: TeamRole) => apiRequest(`/api/team/members/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  removeMember: (id: string) => apiRequest(`/api/team/members/${id}`, { method: 'DELETE' }),
   accept: (token: string) => apiRequest(`/api/team/invitations/${token}/accept`, { method: 'POST' }),
 }
