@@ -26,12 +26,12 @@ export default {
         },
         dark: {
           800: '#1f2937',
-          900: '#111827',
-          950: '#0a0e14',
+          900: '#101820',
+          950: '#080d12',
         },
       },
       backgroundImage: {
-        'hero-glow': 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(16, 185, 129, 0.25), transparent)',
+        'hero-glow': 'radial-gradient(ellipse 70% 48% at 50% -15%, rgba(45, 212, 191, 0.18), transparent)',
       },
       boxShadow: {
         'glow': '0 0 40px -10px rgba(16, 185, 129, 0.4)',

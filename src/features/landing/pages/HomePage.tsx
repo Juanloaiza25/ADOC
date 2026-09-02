@@ -1,251 +1,77 @@
 import { Link } from 'react-router-dom'
-import {
-  CheckIcon,
-  AssignmentIcon,
-  TableIcon,
-  DomainIcon,
-  ShieldIcon,
-  LightningIcon,
-} from '@/shared/icons'
+import { CheckIcon, AssignmentIcon, TableIcon, DomainIcon, ShieldIcon, LightningIcon } from '@/shared/icons'
 
 const FEATURES = [
-  {
-    icon: <CheckIcon />,
-    title: 'Checklists de cumplimiento',
-    desc: 'Revisa que tienes y qué te falta para INVIMA, BPM y Res. 2674. Marca cada ítem como completado, pendiente o no aplica.',
-  },
-  {
-    icon: <AssignmentIcon />,
-    title: 'Formularios normativos',
-    desc: 'Plantillas listas para registro sanitario, solicitudes INVIMA y documentación requerida. Carga datos y descarga reportes.',
-  },
-  {
-    icon: <TableIcon />,
-    title: 'Reportes y evidencia',
-    desc: 'Guarda evidencias, notas y el historial de cumplimiento. Exporta reportes para auditorías o inspecciones.',
-  },
-  {
-    icon: <DomainIcon />,
-    title: 'Por empresa',
-    desc: 'Cada pyme tiene su espacio. Gestiona los datos de tu empresa y el progreso de cumplimiento en un solo lugar.',
-  },
-  {
-    icon: <ShieldIcon />,
-    title: 'Normas actualizadas',
-    desc: 'Checklists basados en INVIMA, Resolución 2674 de 2013 y Buenas Prácticas de Manufactura vigentes.',
-  },
-  {
-    icon: <LightningIcon />,
-    title: 'Simple de usar',
-    desc: 'Sin conocimientos técnicos. Registrate, carga tu empresa y empieza a marcar lo que cumples. Rápido y claro.',
-  },
+  { icon: <CheckIcon />, title: 'Checklists de cumplimiento', desc: 'Identifica qué tienes, qué falta y qué evidencia respalda cada requisito de INVIMA y BPM.' },
+  { icon: <AssignmentIcon />, title: 'Formularios normativos', desc: 'Completa plantillas de registro sanitario y documentación operativa sin empezar desde cero.' },
+  { icon: <TableIcon />, title: 'Reportes y evidencia', desc: 'Conserva notas, archivos e historial; exporta un expediente listo para auditoría.' },
+  { icon: <DomainIcon />, title: 'Un espacio por empresa', desc: 'Centraliza los datos, responsables y avance normativo de cada organización.' },
+  { icon: <ShieldIcon />, title: 'Normativa en contexto', desc: 'Trabaja con guías basadas en INVIMA, Resolución 2674 y buenas prácticas de manufactura.' },
+  { icon: <LightningIcon />, title: 'Seguimiento sin fricción', desc: 'Prioriza pendientes, recibe alertas y mantén al equipo alineado desde cualquier dispositivo.' },
 ]
 
 const STEPS = [
-  { num: '1', title: 'Crea tu cuenta', desc: 'Registrate gratis con tu email.' },
-  { num: '2', title: 'Carga tu empresa', desc: 'Nombre, NIT, sector y datos básicos.' },
-  { num: '3', title: 'Elige el checklist', desc: 'INVIMA, BPM Infraestructura o Personal.' },
-  { num: '4', title: 'Marca y guarda', desc: 'Revisa cada ítem, sube evidencias y has seguimiento.' },
+  ['Crea tu espacio', 'Registra tu cuenta y los datos básicos de la empresa.'],
+  ['Selecciona la norma', 'Activa el checklist que corresponde a tu operación.'],
+  ['Documenta el avance', 'Marca requisitos, adjunta evidencia y asigna responsables.'],
+  ['Llega preparado', 'Exporta el expediente y consulta el historial antes de una visita.'],
 ]
 
 const PRICING = [
-  { name: 'Starter', price: 'Gratis', desc: 'Para empezar', features: ['1 empresa', 'Checklists básicos', 'Formularios básicos'] },
-  { name: 'Pro', price: 'Próximamente', desc: 'Para pymes en crecimiento', features: ['Multi-empresa', 'Reportes exportables', 'Soporte prioritario'], popular: true },
-  { name: 'Enterprise', price: 'Próximamente', desc: 'Para grandes empresas', features: ['Multi-empresa', 'Reportes exportables', 'Soporte dedicado 24/7'] },
+  { name: 'Starter', price: 'Gratis', desc: 'Para ordenar una primera empresa', features: ['1 empresa', 'Checklists esenciales', 'Formularios básicos'] },
+  { name: 'Pro', price: 'Próximamente', desc: 'Para equipos que necesitan trazabilidad', features: ['Más empresas', 'Reportes exportables', 'Alertas y colaboración'], popular: true },
+  { name: 'Enterprise', price: 'Próximamente', desc: 'Para operaciones con mayor alcance', features: ['Gestión multiempresa', 'Historial avanzado', 'Acompañamiento dedicado'] },
 ]
 
 const FAQ = [
-  { q: '¿Qué normas cubre?', a: 'INVIMA, Resolución 2674 (BPM), registro sanitario y requisitos relacionados con alimentos.' },
-  { q: '¿Necesito experiencia previa?', a: 'No. La plataforma explica cada requisito y te guía paso a paso.' },
-  { q: '¿Mis datos están seguros?', a: 'Sí. Usamos encriptación y cumplimos con buenas prácticas de seguridad.' },
-  { q: '¿Puedo usarlo en celular?', a: 'Sí. La interfaz es responsive y podés revisar desde cualquier dispositivo.' },
+  ['¿Qué normas cubre?', 'INVIMA, Resolución 2674 (BPM), registro sanitario y requisitos relacionados con alimentos.'],
+  ['¿Necesito experiencia previa?', 'No. Cada requisito incluye contexto y el flujo te guía para documentar el avance.'],
+  ['¿Puedo trabajar con mi equipo?', 'Sí. Puedes invitar integrantes, asignar responsabilidades y consultar quién hizo cada cambio.'],
+  ['¿Funciona en celular?', 'Sí. Puedes revisar pendientes, evidencias y vencimientos desde cualquier dispositivo.'],
 ]
 
 export function HomePage() {
-  return (
-    <>
-      {/* Hero */}
-      <section className="relative min-h-[calc(100vh-6rem)]">
-        <div className="absolute inset-0 bg-hero-glow pointer-events-none" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-          <div className="text-center max-w-4xl mx-auto">
-            <span className="inline-block px-4 py-1.5 mb-6 rounded-full bg-primary-500/20 text-primary-400 text-sm font-medium">
-              Cumplimiento normativo simplificado
-            </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-              Cumple con{' '}
-              <span className="text-primary-400">INVIMA</span>
-              {' '}y normas alimentarias
-            </h1>
-            <p className="text-lg sm:text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-              Checklists, formularios y seguimiento para que tu pyme de alimentos cumpla con BPM,
-              registro sanitario y más. Simple y sin complicaciones.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-base font-semibold text-dark-950 bg-primary-400 hover:bg-primary-300 transition-all shadow-glow-sm hover:shadow-glow"
-              >
-                Empezar gratis
-              </Link>
-              <button
-                type="button"
-                onClick={() => document.getElementById('precios')?.scrollIntoView({ behavior: 'smooth' })}
-                className="inline-flex items-center justify-center px-8 py-4 rounded-xl text-base font-semibold text-white border border-gray-600 hover:border-primary-500/50 hover:text-primary-400 transition-all"
-              >
-                Ver planes
-              </button>
+  return <>
+    <section className="relative overflow-hidden border-b border-slate-800/60">
+      <div className="absolute inset-0 bg-hero-glow pointer-events-none" />
+      <div className="relative mx-auto grid min-h-[680px] max-w-7xl items-center gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1.08fr_.92fr] lg:px-8 lg:py-24">
+        <div className="hero-reveal">
+          <h1 className="max-w-3xl text-5xl font-extrabold leading-[1.02] tracking-[-.04em] text-white sm:text-6xl lg:text-[4.6rem]">
+            Cumplimiento alimentario, <span className="text-primary-300">bajo control.</span>
+          </h1>
+          <p className="mt-7 max-w-xl text-lg leading-8 text-slate-400">Organiza requisitos, evidencia y vencimientos de INVIMA en un espacio compartido que tu equipo sí puede mantener al día.</p>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <Link to="/register" className="interactive inline-flex items-center justify-center rounded-xl bg-primary-400 px-6 py-3.5 font-bold text-dark-950 shadow-lg shadow-primary-500/10 hover:bg-primary-300">Crear cuenta gratis <span className="ml-2" aria-hidden="true">→</span></Link>
+            <Link to="/login" className="interactive inline-flex items-center justify-center rounded-xl border border-slate-700 px-6 py-3.5 font-semibold text-slate-200 hover:border-slate-500 hover:bg-slate-900">Ver demo</Link>
+          </div>
+          <p className="mt-5 text-sm text-slate-500">Sin tarjeta · Configuración guiada · Datos exportables</p>
+        </div>
+
+        <div className="hero-reveal relative" style={{ animationDelay: '100ms' }} aria-label="Vista previa del panel de ADOC">
+          <div className="absolute -inset-8 rounded-full bg-primary-500/10 blur-3xl" />
+          <div className="surface relative overflow-hidden bg-[#0d151c] p-5 shadow-2xl shadow-black/40 sm:p-6">
+            <div className="mb-7 flex items-center justify-between"><div><p className="text-xs font-semibold text-slate-500">AVANCE GENERAL</p><p className="mt-1 text-xl font-bold text-white">Planta principal</p></div><span className="rounded-full bg-primary-400/10 px-3 py-1 text-xs font-semibold text-primary-300">Al día</span></div>
+            <div className="grid gap-5 sm:grid-cols-[.75fr_1.25fr]">
+              <div className="flex min-h-44 flex-col justify-between rounded-xl bg-primary-400 p-5 text-dark-950"><span className="text-sm font-semibold">Cumplimiento</span><strong className="text-5xl font-extrabold tracking-[-.05em]">78%</strong><span className="text-sm font-medium">+12% este mes</span></div>
+              <div className="space-y-3">{[['BPM · Infraestructura','86%'],['Registro sanitario','72%'],['Personal manipulador','64%']].map(([label,value]) => <div key={label} className="rounded-xl bg-slate-900 p-4"><div className="mb-3 flex justify-between text-sm"><span className="text-slate-300">{label}</span><strong className="text-white">{value}</strong></div><div className="h-1.5 rounded-full bg-slate-800"><span className="block h-full rounded-full bg-primary-400" style={{width:value}} /></div></div>)}</div>
             </div>
-            <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
-              <span className="flex items-center gap-2"><span className="text-primary-400">✓</span> Sin tarjeta de crédito</span>
-              <span className="flex items-center gap-2"><span className="text-primary-400">✓</span> Para pymes de alimentos</span>
-              <span className="flex items-center gap-2"><span className="text-primary-400">✓</span> INVIMA y BPM</span>
-            </div>
+            <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-4 text-sm"><span className="text-slate-500">Próximo vencimiento</span><span className="font-semibold text-amber-300">Registro INVIMA · 12 días</span></div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      {/* Funciones */}
-      <section id="funciones" className="py-20 sm:py-28 scroll-mt-27">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-              Todo lo que necesitas
-            </h2>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              Herramientas pensadas para que tu pyme cumpla con las normas de INVIMA y BPM de forma simple
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="p-6 rounded-2xl bg-dark-900/60 border border-gray-800 hover:border-gray-700 transition-colors"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center text-xl text-primary-400 mb-4">
-                  {f.icon}
-                </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{f.title}</h3>
-                <p className="text-gray-400 text-sm">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    <section id="funciones" className="scroll-mt-24 py-24 sm:py-32"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="grid gap-12 lg:grid-cols-[.72fr_1.28fr]"><div><h2 className="section-title lg:sticky lg:top-28">Todo el expediente, en un solo lugar.</h2><p className="section-copy">Menos archivos dispersos. Más claridad sobre qué falta, quién responde y cuándo vence.</p></div>
+      <div className="grid border-t border-slate-800 sm:grid-cols-2">{FEATURES.map((f) => <article key={f.title} className="group border-b border-slate-800 py-7 sm:p-7 sm:[&:nth-child(odd)]:border-r"><div className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-primary-300 transition-transform duration-200 group-hover:-translate-y-1">{f.icon}</div><h3 className="font-bold text-white">{f.title}</h3><p className="mt-2 text-sm leading-6 text-slate-400">{f.desc}</p></article>)}</div></div>
+    </div></section>
 
-      {/* Cómo funciona */}
-      <section id="como-funciona" className="py-20 sm:py-28 bg-dark-900/30 scroll-mt-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Cómo funciona</h2>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              En cuatro pasos simples empezás a ordenar el cumplimiento de tu pyme
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {STEPS.map((s, i) => (
-              <div key={s.num} className="relative text-center">
-                <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-xl">
-                  {s.num}
-                </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{s.title}</h3>
-                <p className="text-gray-400 text-sm">{s.desc}</p>
-                {i < STEPS.length - 1 && (
-                  <div className="hidden lg:block absolute top-7 left-[calc(50%+2rem)] w-[calc(100%-4rem)] h-0.5 bg-gray-700" />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    <section id="como-funciona" className="scroll-mt-24 border-y border-slate-800/70 bg-slate-900/30 py-24"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><h2 className="section-title">De requisito a evidencia.</h2><p className="section-copy">Un flujo directo para llegar a la auditoría con menos incertidumbre.</p><div className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-slate-800 bg-slate-800 md:grid-cols-4">{STEPS.map(([title,desc],i) => <article key={title} className="bg-dark-950 p-6"><span className="font-mono text-sm text-primary-300">0{i+1}</span><h3 className="mt-16 font-bold text-white">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-400">{desc}</p></article>)}</div></div></section>
 
-      {/* Precios */}
-      <section id="precios" className="py-20 sm:py-28 scroll-mt-25">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Planes y precios</h2>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              Elige el plan que se ajuste a tu necesidad
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-            {PRICING.map((p) => (
-              <div
-                key={p.name}
-                className={`relative p-6 rounded-2xl border transition-colors ${p.popular
-                  ? 'bg-dark-900/60 border-primary-500/50 shadow-glow-sm'
-                  : 'bg-dark-900/40 border-gray-800 hover:border-gray-700'
-                  }`}
-              >
-                {p.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary-500 text-dark-950 text-xs font-semibold">
-                    MÁS POPULAR
-                  </span>
-                )}
-                <h3 className="text-xl font-bold text-primary-400 mb-1">{p.name}</h3>
-                <p className="text-2xl font-bold text-white mb-1">{p.price}</p>
-                <p className="text-gray-500 text-sm mb-6">{p.desc}</p>
-                <ul className="space-y-2 mb-6">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-gray-400 text-sm">
-                      <span className="text-primary-400">✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to="/register"
-                  className={`block w-full py-3 text-center font-semibold rounded-xl transition-colors ${p.popular
-                    ? 'bg-primary-500 text-dark-950 hover:bg-primary-400'
-                    : 'bg-dark-800 text-white border border-gray-700 hover:border-gray-600'
-                    }`}
-                >
-                  Elegir {p.name}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    <section id="precios" className="scroll-mt-24 py-24 sm:py-32"><div className="mx-auto max-w-5xl px-4 sm:px-6"><div className="text-center"><h2 className="section-title">Empieza sin costo.</h2><p className="section-copy mx-auto">Escala cuando tu operación necesite más empresas, equipo y trazabilidad.</p></div><div className="mt-14 grid gap-5 md:grid-cols-3">{PRICING.map(p => <article key={p.name} className={`surface relative flex flex-col p-6 ${p.popular ? 'border-primary-400/50 bg-primary-400/[.06]' : ''}`}>{p.popular && <span className="mb-4 w-fit rounded-full bg-primary-400 px-2.5 py-1 text-[11px] font-bold text-dark-950">RECOMENDADO</span>}<h3 className="text-lg font-bold text-white">{p.name}</h3><strong className="mt-3 text-2xl text-primary-300">{p.price}</strong><p className="mt-2 min-h-12 text-sm text-slate-500">{p.desc}</p><ul className="my-6 flex-1 space-y-3">{p.features.map(f => <li key={f} className="flex gap-2 text-sm text-slate-300"><span className="text-primary-300">✓</span>{f}</li>)}</ul><Link to="/register" className={`interactive rounded-xl py-3 text-center text-sm font-bold ${p.popular ? 'bg-primary-400 text-dark-950 hover:bg-primary-300' : 'border border-slate-700 text-white hover:bg-slate-800'}`}>Elegir {p.name}</Link></article>)}</div></div></section>
 
-      {/* FAQ */}
-      <section id="faq" className="py-20 sm:py-28 bg-dark-900/30 scroll-mt-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Preguntas frecuentes</h2>
-            <p className="text-gray-400">Resolvemos las dudas más comunes</p>
-          </div>
-          <div className="space-y-4">
-            {FAQ.map((item) => (
-              <div
-                key={item.q}
-                className="p-6 rounded-2xl bg-dark-900/60 border border-gray-800"
-              >
-                <h4 className="font-semibold text-white mb-2">{item.q}</h4>
-                <p className="text-gray-400 text-sm">{item.a}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    <section id="faq" className="scroll-mt-24 border-y border-slate-800/70 bg-slate-900/30 py-24"><div className="mx-auto max-w-4xl px-4 sm:px-6"><h2 className="section-title">Preguntas frecuentes</h2><div className="mt-10 divide-y divide-slate-800 border-y border-slate-800">{FAQ.map(([q,a]) => <div key={q} className="grid gap-2 py-6 md:grid-cols-[.75fr_1.25fr]"><h3 className="font-semibold text-white">{q}</h3><p className="text-sm leading-6 text-slate-400">{a}</p></div>)}</div></div></section>
 
-      {/* CTA Final */}
-      <section className="relative py-20 sm:py-28 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(16,185,129,0.15),transparent)] pointer-events-none" />
-        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            ¿Listo para cumplir con INVIMA?
-          </h2>
-          <p className="text-lg text-gray-400 mb-10 max-w-xl mx-auto">
-            Empieza hoy a organizar el cumplimiento normativo de tu pyme. Es gratis, sin tarjeta de crédito.
-          </p>
-          <Link
-            to="/register"
-            className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl text-base font-semibold text-dark-950 bg-primary-400 hover:bg-primary-300 transition-all shadow-glow-sm hover:shadow-glow"
-          >
-            Crear cuenta gratis
-          </Link>
-        </div>
-      </section>
-    </>
-  )
+    <section className="py-24 sm:py-32"><div className="mx-auto max-w-4xl px-4 text-center"><h2 className="section-title">Tu próxima auditoría puede empezar hoy.</h2><p className="section-copy mx-auto">Crea tu espacio, carga la empresa y convierte los pendientes en un plan claro.</p><Link to="/register" className="interactive mt-9 inline-flex rounded-xl bg-primary-400 px-7 py-3.5 font-bold text-dark-950 hover:bg-primary-300">Crear cuenta gratis</Link></div></section>
+  </>
 }

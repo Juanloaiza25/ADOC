@@ -63,12 +63,12 @@ export function MainLayout() {
 
   const navLinkClass = 'text-gray-400 hover:text-primary-400 font-medium transition-colors'
   const appNavigation = [
-    { label: 'Resumen', href: '/dashboard', icon: '⌂' },
-    { label: 'Checklists', href: '/checklists', icon: '✓' },
-    { label: 'Formularios', href: '/forms', icon: '▤' },
-    { label: 'Acciones', href: '/actions', icon: '!' },
-    { label: 'Vencimientos', href: '/deadlines', icon: '◷' },
-    { label: 'Reportes', href: '/reports', icon: '↧' },
+    { label: 'Resumen', href: '/dashboard', icon: 'M4 12h6V4H4v8Zm0 8h6v-4H4v4Zm10 0h6v-8h-6v8Zm0-16v4h6V4h-6Z' },
+    { label: 'Checklists', href: '/checklists', icon: 'm5 12 4 4L19 6' },
+    { label: 'Formularios', href: '/forms', icon: 'M6 3h9l3 3v15H6V3Zm3 7h6M9 14h6M9 18h4' },
+    { label: 'Acciones', href: '/actions', icon: 'M12 3 3 20h18L12 3Zm0 6v5m0 3v.1' },
+    { label: 'Vencimientos', href: '/deadlines', icon: 'M7 3v3m10-3v3M4 9h16M5 5h14v16H5V5Z' },
+    { label: 'Reportes', href: '/reports', icon: 'M5 20V10m7 10V4m7 16v-7' },
   ]
 
   const navItems = isHome ? (
@@ -150,13 +150,13 @@ export function MainLayout() {
   return (
     <div className="min-h-screen bg-dark-950 flex flex-col">
       <nav
-        className={`sticky top-0 z-50 bg-dark-950/95 backdrop-blur-md transition-colors duration-200 ${scrolled ? 'border-b border-gray-700/80' : 'border-b border-transparent'
+        className={`sticky top-0 z-50 bg-dark-950/90 backdrop-blur-xl transition-colors duration-200 ${scrolled ? 'border-b border-slate-800/80 shadow-lg shadow-black/10' : 'border-b border-transparent'
           }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link to="/" className="flex min-w-0 items-center gap-2 text-xl font-bold text-white">
-              <span className="w-12 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-dark-950 font-extrabold text-sm">
+            <Link to="/" className="interactive flex min-w-0 items-center gap-3 text-xl font-bold text-white">
+              <span className="flex h-9 w-12 items-center justify-center rounded-lg bg-primary-400 text-sm font-extrabold tracking-tight text-dark-950 shadow-lg shadow-primary-500/10">
                 ADOC
               </span>
               {!isAuthenticated && <span className="hidden 2xl:inline">Asesoria Documental en Operaciones y Calidad</span>}
@@ -231,9 +231,10 @@ export function MainLayout() {
 
       {isAuthenticated && !isHome ? (
         <div className="mx-auto flex w-full max-w-7xl flex-1">
-          <aside className="hidden w-56 shrink-0 border-r border-gray-800 px-4 py-8 lg:block">
-            <nav className="sticky top-24 space-y-1">
-              {appNavigation.map((item) => <Link key={item.href} to={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${location.pathname === item.href ? 'bg-primary-500/15 text-primary-400' : 'text-gray-500 hover:bg-dark-900 hover:text-gray-200'}`}><span className="flex h-6 w-6 items-center justify-center rounded-md bg-dark-800 text-xs">{item.icon}</span>{item.label}</Link>)}
+          <aside className="hidden w-60 shrink-0 border-r border-slate-800/70 px-5 py-8 lg:block">
+            <nav className="sticky top-24 space-y-1.5">
+              <p className="mb-4 px-3 text-[11px] font-bold uppercase tracking-[.18em] text-slate-600">Espacio de trabajo</p>
+              {appNavigation.map((item) => <Link key={item.href} to={item.href} className={`interactive flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${location.pathname === item.href ? 'bg-primary-500/12 text-primary-300 shadow-inner shadow-primary-400/5' : 'text-slate-500 hover:bg-slate-900/80 hover:text-slate-200'}`}><svg aria-hidden="true" className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={item.icon} /></svg>{item.label}</Link>)}
               <div className="my-3 border-t border-gray-800" />
               <Link to="/team" className={`block rounded-xl px-3 py-2 text-sm ${location.pathname === '/team' ? 'text-primary-400' : 'text-gray-500 hover:text-gray-200'}`}>Equipo</Link>
               <Link to="/audit" className={`block rounded-xl px-3 py-2 text-sm ${location.pathname === '/audit' ? 'text-primary-400' : 'text-gray-500 hover:text-gray-200'}`}>Historial</Link>

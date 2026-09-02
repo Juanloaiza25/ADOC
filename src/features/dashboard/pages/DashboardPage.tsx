@@ -19,25 +19,25 @@ export function DashboardPage() {
 
   const { summary, checklists, recent } = dashboard.data
   const metrics = [
-    { label: 'Avance global', value: `${summary.progress}%`, color: 'text-primary-400' },
+    { label: 'Avance global', value: `${summary.progress}%`, color: 'text-primary-300' },
     { label: 'Cumplen', value: summary.compliant, color: 'text-emerald-400' },
     { label: 'No conformes', value: summary.nonCompliant, color: 'text-red-400' },
     { label: 'Acciones activas', value: summary.activeActions, color: 'text-amber-400' },
   ]
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-12">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-        <div><p className="text-sm font-medium text-primary-400">Panel de cumplimiento</p><h1 className="mt-1 text-2xl font-bold text-white">Hola, {profile.full_name || 'Usuario'}</h1><p className="mt-1 text-gray-400">{company.name}{company.sector && <span> · {company.sector}</span>}</p></div>
-        <Link to="/settings/company" className="text-sm font-medium text-primary-400 hover:text-primary-300">Editar empresa</Link>
+        <div><h1 className="text-3xl font-extrabold text-white">Hola, {profile.full_name || 'Usuario'}</h1><p className="mt-2 text-slate-400">Este es el estado de <span className="font-medium text-slate-200">{company.name}</span>{company.sector && <span> · {company.sector}</span>}</p></div>
+        <Link to="/settings/company" className="interactive rounded-lg border border-slate-700 px-3.5 py-2 text-sm font-medium text-slate-300 hover:border-slate-500 hover:text-white">Editar empresa</Link>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => <article key={metric.label} className="rounded-2xl border border-gray-800 bg-dark-900/60 p-5"><p className="text-sm text-gray-500">{metric.label}</p><strong className={`mt-2 block text-3xl ${metric.color}`}>{metric.value}</strong></article>)}
+      <section className="grid overflow-hidden rounded-2xl border border-slate-800 bg-slate-800 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => <article key={metric.label} className="bg-dark-950 p-5 xl:p-6"><p className="text-sm text-slate-500">{metric.label}</p><strong className={`mt-3 block text-4xl tracking-[-.04em] ${metric.color}`}>{metric.value}</strong></article>)}
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-        <div className="rounded-2xl border border-gray-800 bg-dark-900/50 p-5 sm:p-6">
+        <div className="surface p-5 sm:p-6">
           <div className="mb-5 flex items-center justify-between"><div><h2 className="text-lg font-semibold text-white">Avance por normativa</h2><p className="text-sm text-gray-500">Estado de todos los checklists activos</p></div><Link to="/checklists" className="text-sm text-primary-400">Ver checklists →</Link></div>
           <div className="space-y-5">{checklists.map((item) => {
             const evaluated = item.compliant + item.non_compliant + item.not_applicable
@@ -46,7 +46,7 @@ export function DashboardPage() {
           })}</div>
         </div>
 
-        <div className="rounded-2xl border border-gray-800 bg-dark-900/50 p-5 sm:p-6">
+        <div className="surface p-5 sm:p-6">
           <h2 className="text-lg font-semibold text-white">Actividad reciente</h2>
           <div className="mt-4 space-y-4">{recent.length ? recent.map((activity, index) => <div key={`${activity.updated_at}-${index}`} className="border-l-2 border-gray-800 pl-3"><p className="text-sm text-gray-300">{activity.title}</p><p className="mt-1 text-xs text-gray-500">{STATUS_LABELS[activity.status] ?? activity.status} · {activity.actor || 'Usuario'} · {new Date(activity.updated_at).toLocaleDateString('es-CO')}</p></div>) : <p className="text-sm text-gray-500">Todavía no hay actividad registrada.</p>}</div>
         </div>
