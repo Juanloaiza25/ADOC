@@ -61,7 +61,7 @@ export function MainLayout() {
     el?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const navLinkClass = 'text-gray-400 hover:text-primary-400 font-medium transition-colors'
+  const navLinkClass = 'interactive rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800/70 hover:text-white'
   const appNavigation = [
     { label: 'Resumen', href: '/dashboard', icon: 'M4 12h6V4H4v8Zm0 8h6v-4H4v4Zm10 0h6v-8h-6v8Zm0-16v4h6V4h-6Z' },
     { label: 'Checklists', href: '/checklists', icon: 'm5 12 4 4L19 6' },
@@ -146,25 +146,24 @@ export function MainLayout() {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('')
+  const currentPage = [...appNavigation, { label: 'Equipo', href: '/team' }, { label: 'Historial', href: '/audit' }, { label: 'Mi empresa', href: '/settings/company' }]
+    .find((item) => location.pathname === item.href)?.label
 
   return (
     <div className="min-h-screen bg-dark-950 flex flex-col">
-      <nav
-        className={`sticky top-0 z-50 bg-dark-950/90 backdrop-blur-xl transition-colors duration-200 ${scrolled ? 'border-b border-slate-800/80 shadow-lg shadow-black/10' : 'border-b border-transparent'
-          }`}
-      >
+      <header className={`sticky top-0 z-50 border-b bg-dark-950/92 backdrop-blur-xl transition-[border-color,box-shadow] duration-200 ${scrolled ? 'border-slate-800 shadow-lg shadow-black/15' : 'border-slate-800/55'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
+          <div className="flex h-[4.5rem] items-center justify-between gap-4">
             <Link to="/" className="interactive flex min-w-0 items-center gap-3 text-xl font-bold text-white">
-              <span className="flex h-9 w-12 items-center justify-center rounded-lg bg-primary-400 text-sm font-extrabold tracking-tight text-dark-950 shadow-lg shadow-primary-500/10">
-                ADOC
-              </span>
-              {!isAuthenticated && <span className="hidden 2xl:inline">Asesoria Documental en Operaciones y Calidad</span>}
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-400 text-sm font-extrabold tracking-[-.04em] text-dark-950">A</span>
+              <span className="leading-none"><span className="block text-base font-extrabold tracking-[-.03em]">ADOC</span><span className="mt-1 block text-[10px] font-medium tracking-wide text-slate-500">Cumplimiento normativo</span></span>
             </Link>
 
+            {isAuthenticated && currentPage && <div className="hidden min-w-0 flex-1 items-center gap-3 border-l border-slate-800 pl-5 lg:flex"><span className="text-sm text-slate-600">/</span><span className="truncate text-sm font-semibold text-slate-300">{currentPage}</span></div>}
+
             {/* Desktop nav */}
-            <div className="hidden lg:flex gap-6 items-center">
-              {!isAuthenticated && navItems}
+            <div className="hidden items-center gap-2 lg:flex">
+              {!isAuthenticated && <nav className="mr-3 flex items-center rounded-xl border border-slate-800/80 bg-slate-900/45 p-1">{navItems}</nav>}
               {isAuthenticated ? (
                 <>
                   <NotificationBell />
@@ -172,19 +171,19 @@ export function MainLayout() {
                     <button
                       type="button"
                       onClick={() => setProfileOpen((open) => !open)}
-                      className="flex max-w-56 items-center gap-2 rounded-xl border border-gray-800 bg-dark-900 px-2.5 py-1.5 text-left transition-colors hover:border-gray-700 hover:bg-dark-800"
+                      className="interactive flex h-10 max-w-52 items-center gap-2 rounded-xl px-1.5 pr-2.5 text-left hover:bg-slate-800/70"
                       aria-expanded={profileOpen}
                       aria-label="Abrir menú de usuario"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-500 text-xs font-extrabold text-dark-950">{initials}</span>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-400 text-xs font-extrabold text-dark-950">{initials}</span>
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-medium text-white">{displayName}</span>
-                        <span className="block text-xs text-gray-500">Mi cuenta</span>
                       </span>
-                      <span className={`text-xs text-gray-500 transition-transform ${profileOpen ? 'rotate-180' : ''}`}>⌄</span>
+                      <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" className={`h-4 w-4 text-slate-500 transition-transform duration-150 ${profileOpen ? 'rotate-180' : ''}`}><path d="m6 8 4 4 4-4" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     </button>
                     {profileOpen && (
-                      <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-gray-800 bg-dark-900 p-1.5 shadow-2xl shadow-black/30">
+                      <div className="absolute right-0 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-slate-800 bg-dark-900 p-1.5 shadow-2xl shadow-black/40">
+                        <div className="mb-1 border-b border-slate-800 px-3 py-2"><p className="truncate text-sm font-semibold text-white">{displayName}</p><p className="mt-0.5 truncate text-xs text-slate-500">{user?.email}</p></div>
                         <Link to="/settings/company" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Mi empresa</Link>
                         <Link to="/team" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Equipo</Link>
                         <Link to="/audit" className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-dark-800 hover:text-white">Historial</Link>
@@ -195,7 +194,7 @@ export function MainLayout() {
                     )}
                   </div>
                 </>
-              ) : mobileAuthItems}
+              ) : <><Link to="/login" className="interactive px-3 py-2 text-sm font-semibold text-slate-300 hover:text-white">Ingresar</Link><Link to="/register" className="interactive rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-bold text-dark-950 hover:bg-primary-300">Empezar gratis</Link></>}
             </div>
 
             {/* Mobile actions */}
@@ -204,7 +203,7 @@ export function MainLayout() {
               <button
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-800 transition-colors"
+              className="interactive flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white"
               aria-label="Menú"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -217,17 +216,17 @@ export function MainLayout() {
 
         {/* Mobile menu */}
         <div
-          className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileOpen ? 'max-h-[32rem] border-t border-gray-800' : 'max-h-0'
+          className={`overflow-hidden transition-[max-height,opacity] duration-200 ease-[cubic-bezier(.23,1,.32,1)] lg:hidden ${mobileOpen ? 'max-h-[40rem] border-t border-slate-800 opacity-100' : 'max-h-0 opacity-0'
             }`}
         >
-          <div className="px-4 py-4 flex flex-col items-center gap-3 bg-dark-950/95 backdrop-blur-md">
+          <div className="flex flex-col items-stretch gap-1 bg-dark-950 px-4 py-4">
             {!isAuthenticated && navItems}
-            <div className="border-t border-gray-800 pt-3 flex flex-col items-center gap-3 w-full">
+            <div className="mt-2 flex w-full flex-col items-stretch gap-1 border-t border-slate-800 pt-3">
               {mobileAuthItems}
             </div>
           </div>
         </div>
-      </nav>
+      </header>
 
       {isAuthenticated && !isHome ? (
         <div className="mx-auto flex w-full max-w-7xl flex-1">
